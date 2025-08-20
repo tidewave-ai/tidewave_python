@@ -1,0 +1,14 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tidewave"
+version = "0.1.0"
+description = "Python WSGI middleware for Model Context Protocol (MCP)"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = ["pydantic>=2.0.0"]
+
+[dependency-groups]
+dev = ["pytest>=7.0.0", "ruff>=0.12.9", "flask>=2.0.0", "fastapi>=0.100.0", "uvicorn>=0.20.0"]
