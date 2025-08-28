@@ -3,7 +3,7 @@ uv run python examples/flask_app.py
 """
 
 from flask import Flask
-from tidewave import Middleware
+from tidewave.flask import Middleware
 
 
 def create_app():
@@ -27,7 +27,6 @@ def main():
     flask_app = create_app()
 
     config = {
-        "debug": True,
         "allow_remote_access": False,
         "allowed_origins": None,
     }

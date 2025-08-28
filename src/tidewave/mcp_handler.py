@@ -8,7 +8,6 @@ import logging
 from typing import Dict, Any, Optional, List, Callable
 
 from .tools.base import MCPTool
-from .tools import add, multiply
 
 
 class MCPHandler:
@@ -17,22 +16,18 @@ class MCPHandler:
     PROTOCOL_VERSION = "2025-03-26"
     VERSION = "1.0.0"
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, tool_functions: List[Callable]):
         """Initialize MCP handler
 
         Args:
-            config: Configuration dict with options like debug
+            tool_functions: List of tool functions to make available
         """
-        self.config = config or {}
         self.tools = {}
         self.logger = logging.getLogger(__name__)
-        self._init_tools()
+        self._init_tools(tool_functions)
 
-    def _init_tools(self):
-        """Initialize available MCP tools using auto-discovery"""
-        # Available tool functions
-        tool_functions = [add, multiply]
-
+    def _init_tools(self, tool_functions: List[Callable]):
+        """Initialize available MCP tools from provided functions"""
         self.tools = {}
         for func in tool_functions:
             tool = MCPTool(func)
@@ -64,10 +59,10 @@ class MCPHandler:
                 )
 
             # Validate JSON-RPC format
-            validation_result = self._validate_jsonrpc_message(message)
-            if validation_result is not True:
+            validation_error = self._validate_jsonrpc_message(message)
+            if validation_error:
                 return self._send_jsonrpc_error(
-                    start_response, None, -32600, validation_result
+                    start_response, None, -32600, validation_error
                 )
 
             # Handle the message
@@ -87,8 +82,8 @@ class MCPHandler:
                 start_response, None, -32603, "Internal error"
             )
 
-    def _validate_jsonrpc_message(self, message: Dict[str, Any]) -> str | bool:
-        """Validate JSON-RPC 2.0 message format"""
+    def _validate_jsonrpc_message(self, message: Dict[str, Any]) -> Optional[str]:
+        """Validate JSON-RPC 2.0 message format. Returns error message if invalid, None if valid."""
         if not isinstance(message, dict):
             return "Message must be a JSON object"
 
@@ -101,13 +96,13 @@ class MCPHandler:
 
         if has_method and has_id:
             # Request
-            return True
+            return None
         elif has_method and not has_id:
             # Notification
-            return True
+            return None
         elif has_id and has_result:
             # Response (e.g., to ping)
-            return True
+            return None
         else:
             return "Invalid JSON-RPC message structure"
 

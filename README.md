@@ -13,10 +13,10 @@ See `examples/` folder.
 
 ```bash
 # Install
-uv sync
+uv sync --only-dev
 
 # Run tests
-uv run pytest
+uv run python -m pytest
 
 # Lint and format code
 uv run ruff check --fix .

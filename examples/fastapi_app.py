@@ -5,14 +5,11 @@ uv run python examples/fastapi_app.py
 import asyncio
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
-from starlette.middleware.wsgi import WSGIMiddleware
-
-from tidewave import as_wsgi_app
+from tidewave.fastapi import mount
 
 
 def create_app():
     """Create a FastAPI app with mounted WSGI middleware"""
-    # FastAPI app (ASGI)
     app = FastAPI(title="FastAPI + Tidewave MCP")
 
     @app.get("/", response_class=HTMLResponse)
@@ -26,16 +23,11 @@ def create_app():
         </html>
         """
 
-    # Create WSGI app with tidewave middleware
     config = {
-        "debug": True,
         "allow_remote_access": False,
         "allowed_origins": None,
     }
-    wsgi_app = as_wsgi_app(config)
-
-    # Mount WSGI app in FastAPI
-    app.mount("/tidewave", WSGIMiddleware(wsgi_app))
+    mount(app, config)
 
     return app
 
