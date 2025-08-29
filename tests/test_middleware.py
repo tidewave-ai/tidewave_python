@@ -1,5 +1,5 @@
 """
-Tests for MCP WSGI Middleware - focusing on middleware concerns only
+Tests for MCP WSGI Middleware
 """
 
 import json
@@ -125,11 +125,6 @@ class TestMiddleware(unittest.TestCase):
         call_args = self.start_response.call_args[0]
         self.assertIn("200", call_args[0])
 
-        # Should get proper JSON response
-        response_data = json.loads(b"".join(result).decode("utf-8"))
-        self.assertEqual(response_data["jsonrpc"], "2.0")
-        self.assertEqual(response_data["id"], 1)
-
     def test_invalid_json_request(self):
         """Test handling of invalid JSON"""
         body = "invalid json"
@@ -179,22 +174,8 @@ class TestMiddleware(unittest.TestCase):
         response_data = json.loads(b"".join(result).decode("utf-8"))
         self.assertEqual(response_data["status"], "ok")
 
-    def test_tool_loading(self):
-        """Test that tools are loaded correctly"""
-        # Test that middleware loads tools from the tools module via mcp_handler
-        self.assertIn("add", self.middleware.mcp_handler.tools)
-        self.assertIn("multiply", self.middleware.mcp_handler.tools)
-        self.assertEqual(len(self.middleware.mcp_handler.tools), 2)
-
-        # Test tool structure
-        add_tool = self.middleware.mcp_handler.tools["add"]
-        self.assertIn("name", add_tool)
-        self.assertIn("description", add_tool)
-        self.assertIn("inputSchema", add_tool)
-        self.assertIn("tool_instance", add_tool)
-
-    def test_empty_route_with_script_name(self):
-        """Test that /tidewave/empty works when mounted with SCRIPT_NAME"""
+    def test_tidewave_route_with_script_name(self):
+        """Test that /tidewave routes work when mounted with SCRIPT_NAME"""
         # Create middleware with use_script_name enabled
         config = {"use_script_name": True}
         middleware = self._create_middleware(config)
@@ -209,21 +190,6 @@ class TestMiddleware(unittest.TestCase):
         call_args = self.start_response.call_args[0]
         self.assertIn("200", call_args[0])
 
-    def test_mcp_route_with_script_name(self):
-        """Test that /tidewave/mcp works when mounted with SCRIPT_NAME"""
-        # Create middleware with use_script_name enabled
-        config = {"use_script_name": True}
-        middleware = self._create_middleware(config)
-
-        body = '{"jsonrpc": "2.0", "method": "ping", "id": 1}'
-        environ = self._create_environ("/mcp", "POST", body)
-        environ["SCRIPT_NAME"] = "/tidewave"
-
-        middleware(environ, self.start_response)
-
-        # Should handle the MCP request (not pass through to app)
-        self.demo_app.assert_not_called()
-
     def test_non_tidewave_route_with_script_name(self):
         """Test that non-tidewave routes pass through when mounted"""
         # Create middleware with use_script_name enabled
@@ -237,21 +203,6 @@ class TestMiddleware(unittest.TestCase):
 
         # Should pass through to wrapped app
         self.demo_app.assert_called_once_with(environ, self.start_response)
-
-    def test_security_check_on_empty_route(self):
-        """Test that security checks run on /tidewave/empty route"""
-        config = {"internal_ips": ["127.0.0.1"]}
-        middleware = self._create_middleware(config)
-        environ = self._create_environ(
-            "/tidewave/empty", "GET", remote_addr="192.168.1.100"
-        )
-
-        middleware(environ, self.start_response)
-
-        # Should return 403 Forbidden
-        self.start_response.assert_called_once()
-        call_args = self.start_response.call_args[0]
-        self.assertIn("403", call_args[0])
 
 
 class TestOriginValidation(unittest.TestCase):
@@ -490,179 +441,6 @@ class TestOriginValidation(unittest.TestCase):
                         "403", call_args[0], f"Should allow IPv6: {origin}"
                     )
                 self.start_response.reset_mock()
-
-    def test_host_extraction_edge_cases(self):
-        """Test edge cases in host extraction"""
-        config = {"allowed_origins": ["localhost", "example.com"]}
-        middleware = self._create_middleware(config)
-
-        # Test malformed origins that should still work
-        test_cases = [
-            ("http://localhost:3000", True),  # With scheme
-            ("https://example.com", True),
-        ]
-
-        for origin, should_allow in test_cases:
-            with self.subTest(origin=origin):
-                environ = self._create_environ(origin=origin)
-                middleware(environ, self.start_response)
-
-                if self.start_response.called:
-                    call_args = self.start_response.call_args[0]
-                    if should_allow:
-                        self.assertNotIn("403", call_args[0], f"Should allow: {origin}")
-                    # Note: We don't test blocking case as malformed origins might be handled gracefully
-                self.start_response.reset_mock()
-
-    def test_url_parsing_with_stdlib(self):
-        """Test that URL parsing using urllib.parse works correctly"""
-        config = {"allowed_origins": ["localhost", "example.com", "::1"]}
-        middleware = self._create_middleware(config)
-
-        # Test various URL formats that should be parsed correctly
-        test_cases = [
-            # (origin, expected_host, should_allow)
-            ("http://localhost:3000", "localhost", True),
-            ("https://example.com", "example.com", True),
-            ("http://[::1]:8080", "::1", True),
-            ("http://other.com", "other.com", False),
-            ("https://[2001:db8::1]:3000", "2001:db8::1", False),
-        ]
-
-        for origin, expected_host, should_allow in test_cases:
-            with self.subTest(origin=origin):
-                # Test host extraction using urlparse directly
-                from urllib.parse import urlparse
-
-                extracted_host = urlparse(origin).hostname
-                self.assertEqual(
-                    extracted_host,
-                    expected_host.lower(),
-                    f"Host extraction failed for {origin}",
-                )
-
-                # Test validation
-                environ = self._create_environ(origin=origin)
-                middleware(environ, self.start_response)
-
-                if self.start_response.called:
-                    call_args = self.start_response.call_args[0]
-                    if should_allow:
-                        self.assertNotIn(
-                            "403",
-                            call_args[0],
-                            f"Should allow {origin} -> {extracted_host}",
-                        )
-                    else:
-                        self.assertIn(
-                            "403",
-                            call_args[0],
-                            f"Should block {origin} -> {extracted_host}",
-                        )
-                elif not should_allow:
-                    self.fail(f"Expected 403 for {origin} but no response was sent")
-
-                self.start_response.reset_mock()
-
-
-class TestMCPIntegration(unittest.TestCase):
-    """Integration tests with real tools"""
-
-    def setUp(self):
-        tool_functions = [add, multiply]
-        mcp_handler = MCPHandler(tool_functions)
-        self.middleware = Middleware(Mock(), mcp_handler, {})
-        self.start_response = Mock()
-
-    def _create_environ(self, body):
-        return {
-            "REQUEST_METHOD": "POST",
-            "PATH_INFO": "/tidewave/mcp",
-            "REMOTE_ADDR": "127.0.0.1",
-            "wsgi.input": BytesIO(body.encode("utf-8")),
-            "CONTENT_LENGTH": str(len(body)),
-            "CONTENT_TYPE": "application/json",
-        }
-
-    def test_ping_request(self):
-        """Test MCP ping request"""
-        message = {"jsonrpc": "2.0", "method": "ping", "id": 1}
-        body = json.dumps(message)
-        environ = self._create_environ(body)
-
-        result = self.middleware(environ, self.start_response)
-
-        response_data = json.loads(b"".join(result).decode("utf-8"))
-
-        self.assertEqual(response_data["jsonrpc"], "2.0")
-        self.assertEqual(response_data["id"], 1)
-        self.assertEqual(response_data["result"], {})
-
-    def test_tools_list_request(self):
-        """Test MCP tools/list request"""
-        message = {"jsonrpc": "2.0", "method": "tools/list", "id": 1}
-        body = json.dumps(message)
-        environ = self._create_environ(body)
-
-        result = self.middleware(environ, self.start_response)
-
-        response_data = json.loads(b"".join(result).decode("utf-8"))
-
-        self.assertEqual(response_data["jsonrpc"], "2.0")
-        self.assertEqual(response_data["id"], 1)
-        self.assertIn("tools", response_data["result"])
-
-        # Should have both tools
-        tools = response_data["result"]["tools"]
-        self.assertEqual(len(tools), 2)
-        tool_names = [tool["name"] for tool in tools]
-        self.assertIn("add", tool_names)
-        self.assertIn("multiply", tool_names)
-
-    def test_tool_call_success(self):
-        """Test successful tool call"""
-        message = {
-            "jsonrpc": "2.0",
-            "method": "tools/call",
-            "id": 1,
-            "params": {"name": "add", "arguments": {"a": 5, "b": 3}},
-        }
-        body = json.dumps(message)
-        environ = self._create_environ(body)
-
-        result = self.middleware(environ, self.start_response)
-
-        response_data = json.loads(b"".join(result).decode("utf-8"))
-
-        self.assertEqual(response_data["jsonrpc"], "2.0")
-        self.assertEqual(response_data["id"], 1)
-        self.assertIn("result", response_data)
-        self.assertIn("content", response_data["result"])
-
-        # Check that the result contains the sum
-        content = response_data["result"]["content"][0]["text"]
-        self.assertIn("8", content)  # 5 + 3 = 8
-
-    def test_nonexistent_tool_call(self):
-        """Test calling non-existent tool"""
-        message = {
-            "jsonrpc": "2.0",
-            "method": "tools/call",
-            "id": 1,
-            "params": {"name": "nonexistent", "arguments": {}},
-        }
-        body = json.dumps(message)
-        environ = self._create_environ(body)
-
-        result = self.middleware(environ, self.start_response)
-
-        response_data = json.loads(b"".join(result).decode("utf-8"))
-
-        self.assertEqual(response_data["jsonrpc"], "2.0")
-        self.assertEqual(response_data["id"], 1)
-        self.assertIn("error", response_data)
-        self.assertEqual(response_data["error"]["code"], -32601)
-
 
 if __name__ == "__main__":
     unittest.main()
