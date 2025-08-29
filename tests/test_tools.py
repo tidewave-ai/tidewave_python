@@ -4,6 +4,7 @@ Tests for MCPTool base class
 
 import unittest
 import json
+from typing import List, Optional
 from tidewave.tools.base import MCPTool
 
 
@@ -151,6 +152,97 @@ class TestMCPTool(unittest.TestCase):
 
         self.assertIn("error", result)
         self.assertIn("Error executing failing_func", result["error"])
+
+    def test_tool_with_no_arguments(self):
+        """Test tool with no arguments"""
+
+        def get_current_time() -> str:
+            """Get the current timestamp"""
+            return "2024-01-01 12:00:00"
+
+        tool = MCPTool(get_current_time)
+
+        # Test schema generation
+        schema = tool.input_schema
+        self.assertEqual(schema["type"], "object")
+        self.assertEqual(schema["properties"], {})
+        self.assertEqual(schema["required"], [])
+
+        # Test calling with empty args
+        result = tool.validate_and_call({})
+        self.assertIn("content", result)
+        self.assertEqual(result["content"][0]["type"], "text")
+        self.assertIn("2024-01-01 12:00:00", result["content"][0]["text"])
+
+    def test_tool_with_optional_type(self):
+        """Test tool with Optional type annotation"""
+
+        def greet_user(name: Optional[str] = None) -> str:
+            """Greet a user by name or generically"""
+            if name:
+                return f"Hello, {name}!"
+            return "Hello there!"
+
+        tool = MCPTool(greet_user)
+
+        # Test schema generation - Optional should allow null
+        schema = tool.input_schema
+        self.assertEqual(schema["type"], "object")
+        self.assertIn("name", schema["properties"])
+        self.assertEqual(schema["required"], [])  # Optional with default
+
+        # The schema should allow both string and null
+        name_prop = schema["properties"]["name"]
+        self.assertIn("anyOf", name_prop)
+        types = [item["type"] for item in name_prop["anyOf"]]
+        self.assertIn("string", types)
+        self.assertIn("null", types)
+
+        # Test calling with no args
+        result1 = tool.validate_and_call({})
+        self.assertIn("Hello there!", result1["content"][0]["text"])
+
+        # Test calling with name
+        result2 = tool.validate_and_call({"name": "Alice"})
+        self.assertIn("Hello, Alice!", result2["content"][0]["text"])
+
+        # Test calling with explicit None
+        result3 = tool.validate_and_call({"name": None})
+        self.assertIn("Hello there!", result3["content"][0]["text"])
+
+    def test_tool_with_list_type(self):
+        """Test tool with List type annotation"""
+
+        def process_items(items: List[str]) -> str:
+            """Process a list of string items"""
+            return f"Processed {len(items)} items: {', '.join(items)}"
+
+        tool = MCPTool(process_items)
+
+        # Test schema generation
+        schema = tool.input_schema
+        self.assertEqual(schema["type"], "object")
+        self.assertIn("items", schema["properties"])
+        self.assertEqual(schema["required"], ["items"])
+
+        # Check array type in schema
+        items_prop = schema["properties"]["items"]
+        self.assertEqual(items_prop["type"], "array")
+        self.assertIn("items", items_prop)
+        self.assertEqual(items_prop["items"]["type"], "string")
+
+        # Test calling with list
+        result1 = tool.validate_and_call({"items": ["apple", "banana", "cherry"]})
+        self.assertIn("Processed 3 items: apple, banana, cherry", result1["content"][0]["text"])
+
+        # Test calling with empty list
+        result2 = tool.validate_and_call({"items": []})
+        self.assertIn("Processed 0 items:", result2["content"][0]["text"])
+
+        # Test validation error with wrong type
+        result3 = tool.validate_and_call({"items": "not_a_list"})
+        self.assertIn("error", result3)
+        self.assertIn("Invalid arguments", result3["error"])
 
 
 if __name__ == "__main__":
