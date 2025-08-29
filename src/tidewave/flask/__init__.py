@@ -12,18 +12,16 @@ from ..tools import add, multiply
 class Middleware:
     """Flask-specific middleware that handles MCP handler initialization and routing"""
 
-    def __init__(self, app: Callable, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, app: Callable, config: Dict[str, Any] = {}):
         """Initialize Flask middleware with MCP handler
 
         Args:
             app: Flask WSGI application to wrap
             config: Configuration dict with options:
-                - debug: bool (default False)
-                - allow_remote_access: bool (default False)
+                - internal_ips: list of allowed IP addresses (default ["127.0.0.1"])
                 - allowed_origins: list of allowed origin hosts (default [])
-                - use_script_name: bool (default False)
         """
-        self.config = config or {}
+        self.config = config
 
         # Create MCP handler with tools
         tool_functions = [add, multiply]

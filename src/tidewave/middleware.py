@@ -4,7 +4,7 @@ WSGI Middleware for basic routing and security
 
 from http import HTTPStatus
 from typing import Dict, Any, Optional, Callable
-import ipaddress
+
 import logging
 from urllib.parse import urlparse
 
@@ -26,7 +26,8 @@ class Middleware:
             app: WSGI application to wrap
             mcp_handler: MCPHandler instance to handle MCP requests
             config: Configuration dict with options:
-                - allow_remote_access: bool (default False)
+                - internal_ips: list of allowed IP addresses (default ["127.0.0.1"])
+                  * Empty list means no access allowed
                 - allowed_origins: list of allowed origin hosts (default []) following Django's ALLOWED_HOSTS pattern:
                   * Exact matches (case-insensitive): 'example.com', 'www.example.com'
                   * Subdomain wildcards: '.example.com' matches example.com and all subdomains
@@ -88,13 +89,11 @@ class Middleware:
 
         # Check remote IP
         remote_addr = environ.get("REMOTE_ADDR", "")
-        if not self._is_local_ip(remote_addr) and not self.config.get(
-            "allow_remote_access", False
-        ):
-            self.logger.warning(f"Remote access denied for IP: {remote_addr}")
+        if not self._is_ip_allowed(remote_addr):
+            self.logger.warning(f"Access denied for IP: {remote_addr}")
             return (
-                "For security reasons, Tidewave does not accept remote connections by default.\n\n"
-                "If you really want to allow remote connections, configure the Tidewave with the `allow_remote_access: True` option."
+                "For security reasons, Tidewave only accepts requests from allowed IPs.\n\n"
+                f"Add '{remote_addr}' to the `internal_ips` configuration option to allow access."
             )
 
         # Check origin header (if present)
@@ -145,26 +144,10 @@ class Middleware:
 
         return False
 
-    def _is_local_ip(self, ip_str: str) -> bool:
-        """Check if IP address is local/loopback"""
-        try:
-            ip = ipaddress.ip_address(ip_str)
-            # Check for IPv4 loopback (127.x.x.x)
-            if ip.version == 4 and str(ip).startswith("127."):
-                return True
-            # Check for IPv6 loopback (::1)
-            if ip.version == 6 and ip.is_loopback:
-                return True
-            # Check for IPv4-mapped IPv6 localhost (::ffff:127.0.0.1)
-            if (
-                ip.version == 6
-                and ip.ipv4_mapped
-                and str(ip.ipv4_mapped).startswith("127.")
-            ):
-                return True
-            return False
-        except ValueError:
-            return False
+    def _is_ip_allowed(self, ip_str: str) -> bool:
+        """Check if IP address is in allowed internal IPs"""
+        internal_ips = self.config.get("internal_ips", ["127.0.0.1"])
+        return ip_str in internal_ips
 
     def _send_error_response(
         self,

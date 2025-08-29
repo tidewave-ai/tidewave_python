@@ -11,13 +11,13 @@ from ..mcp_handler import MCPHandler
 from ..tools import add, multiply
 
 
-def mount(app: FastAPI, config: Optional[Dict[str, Any]] = None):
+def mount(app: FastAPI, config: Dict[str, Any] = {}):
     """Mount Tidewave middleware to a FastAPI application
 
     Args:
         app: FastAPI application instance
         config: Configuration dict with options:
-            - allow_remote_access: bool (default False)
+            - internal_ips: list of allowed IP addresses (default ["127.0.0.1"])
             - allowed_origins: list of allowed origin hosts (default [])
     """
 
@@ -27,7 +27,7 @@ def mount(app: FastAPI, config: Optional[Dict[str, Any]] = None):
         return [b"Not Found"]
 
     # Set use_script_name to True for mounted applications
-    app_config = config.copy() if config else {}
+    app_config = config.copy()
     app_config["use_script_name"] = True
 
     # Create MCP handler and middleware

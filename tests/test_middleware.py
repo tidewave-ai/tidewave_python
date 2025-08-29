@@ -21,7 +21,7 @@ class TestMiddleware(unittest.TestCase):
 
         self.config = {
             "debug": True,
-            "allow_remote_access": True,  # Allow for testing
+            "internal_ips": ["127.0.0.1"],  # Allow for testing
             "allowed_origins": ["localhost"],
         }
 
@@ -97,7 +97,7 @@ class TestMiddleware(unittest.TestCase):
 
     def test_security_remote_ip_blocked(self):
         """Test that remote IPs are blocked by default"""
-        config = {"allow_remote_access": False}
+        config = {"internal_ips": ["127.0.0.1"]}
         middleware = self._create_middleware(config)
         environ = self._create_environ(
             "/tidewave/mcp", "POST", remote_addr="192.168.1.100"
@@ -108,6 +108,27 @@ class TestMiddleware(unittest.TestCase):
         # Should return 403 Forbidden
         call_args = self.start_response.call_args[0]
         self.assertIn("403", call_args[0])
+
+    def test_security_internal_ip_allowed(self):
+        """Test that internal IPs are allowed"""
+        config = {"internal_ips": ["127.0.0.1", "192.168.1.100"]}
+        middleware = self._create_middleware(config)
+        environ = self._create_environ(
+            "/tidewave/mcp", "POST",
+            body='{"jsonrpc": "2.0", "method": "ping", "id": 1}',
+            remote_addr="192.168.1.100"
+        )
+
+        result = middleware(environ, self.start_response)
+
+        # Should return 200 OK (ping response)
+        call_args = self.start_response.call_args[0]
+        self.assertIn("200", call_args[0])
+
+        # Should get proper JSON response
+        response_data = json.loads(b"".join(result).decode("utf-8"))
+        self.assertEqual(response_data["jsonrpc"], "2.0")
+        self.assertEqual(response_data["id"], 1)
 
     def test_invalid_json_request(self):
         """Test handling of invalid JSON"""
@@ -219,7 +240,7 @@ class TestMiddleware(unittest.TestCase):
 
     def test_security_check_on_empty_route(self):
         """Test that security checks run on /tidewave/empty route"""
-        config = {"allow_remote_access": False}
+        config = {"internal_ips": ["127.0.0.1"]}
         middleware = self._create_middleware(config)
         environ = self._create_environ(
             "/tidewave/empty", "GET", remote_addr="192.168.1.100"

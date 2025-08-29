@@ -25,13 +25,7 @@ def create_app():
 def main():
     """Run the Flask app with MCP middleware"""
     flask_app = create_app()
-
-    config = {
-        "allow_remote_access": False,
-        "allowed_origins": None,
-    }
-
-    app_with_mcp = Middleware(flask_app, config)
+    app_with_mcp = Middleware(flask_app)
 
     print("Starting Flask server on http://localhost:8000")
     print("Try sending MCP requests to http://localhost:8000/tidewave/mcp")

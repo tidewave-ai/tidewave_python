@@ -23,12 +23,7 @@ def create_app():
         </html>
         """
 
-    config = {
-        "allow_remote_access": False,
-        "allowed_origins": None,
-    }
-    mount(app, config)
-
+    mount(app)
     return app
 
 

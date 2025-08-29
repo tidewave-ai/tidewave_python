@@ -18,6 +18,11 @@ def create_app():
         MIDDLEWARE=[
             'django.middleware.security.SecurityMiddleware',
             'django.middleware.common.CommonMiddleware',
+            'tidewave.django.Middleware',
+        ],
+        INTERNAL_IPS=[
+            '127.0.0.1',
+            '::1',
         ],
         DATABASES={
             'default': {
@@ -52,6 +57,7 @@ def main():
     django_app = create_app()
 
     print("Starting Django server on http://localhost:8000")
+    print("Try sending MCP requests to http://localhost:8000/tidewave/mcp")
     print("Press Ctrl+C to stop")
 
     from wsgiref.simple_server import make_server
