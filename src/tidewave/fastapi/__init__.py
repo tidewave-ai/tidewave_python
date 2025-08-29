@@ -20,6 +20,7 @@ def mount(app: FastAPI, config: Optional[Dict[str, Any]] = None):
             - allow_remote_access: bool (default False)
             - allowed_origins: list of allowed origin hosts (default [])
     """
+
     # Create WSGI app for MCP handling
     def wsgi_app(environ, start_response):
         start_response("404 Not Found", [("Content-Type", "text/plain")])

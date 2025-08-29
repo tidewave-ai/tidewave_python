@@ -14,7 +14,12 @@ from .mcp_handler import MCPHandler
 class Middleware:
     """WSGI middleware that handles routing and security for Tidewave endpoints"""
 
-    def __init__(self, app: Callable, mcp_handler: MCPHandler, config: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self,
+        app: Callable,
+        mcp_handler: MCPHandler,
+        config: Optional[Dict[str, Any]] = None,
+    ):
         """Initialize middleware
 
         Args:
@@ -115,11 +120,11 @@ class Middleware:
 
     def _validate_allowed_origin(self, host: str) -> bool:
         """Validate if origin host is allowed using Django ALLOWED_HOSTS pattern"""
-        allowed_origins = self.config.get("allowed_origins", [])
+        allowed_origins = self.config.get("allowed_origins", [".localhost", "127.0.0.1", "::1"])
 
         # Default to local development hosts if empty (like Django's DEBUG mode)
         if not allowed_origins:
-            allowed_origins = [".localhost", "127.0.0.1", "::1"]
+            return False
 
         for allowed in allowed_origins:
             allowed = allowed.lower()  # Case-insensitive matching
@@ -162,7 +167,10 @@ class Middleware:
             return False
 
     def _send_error_response(
-        self, start_response: Callable, status: HTTPStatus, message: Optional[str] = None
+        self,
+        start_response: Callable,
+        status: HTTPStatus,
+        message: Optional[str] = None,
     ):
         """Send HTTP error response using standard status codes"""
         error_message = message or status.phrase

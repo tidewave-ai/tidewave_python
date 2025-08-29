@@ -11,4 +11,11 @@ requires-python = ">=3.8"
 dependencies = ["pydantic>=2.0.0"]
 
 [dependency-groups]
-dev = ["pytest>=7.0.0", "ruff>=0.12.9", "flask>=2.0.0", "fastapi>=0.100.0", "uvicorn>=0.20.0"]
+dev = [
+  "pytest>=7.0.0",
+  "ruff>=0.12.9",
+  "flask>=2.0.0",
+  "fastapi>=0.100.0",
+  "uvicorn>=0.20.0",
+  "django>=4.2.23",
+]

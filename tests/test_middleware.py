@@ -276,12 +276,39 @@ class TestOriginValidation(unittest.TestCase):
         if call_args:
             self.assertNotIn("403", call_args[0])
 
-    def test_empty_allowed_origins_uses_defaults(self):
-        """Test that empty allowed_origins uses default local hosts"""
+    def test_empty_allowed_origins_blocks_all(self):
+        """Test that empty allowed_origins blocks all requests"""
         config = {"allowed_origins": []}
         middleware = self._create_middleware(config)
 
-        # Test localhost variants
+        # Test localhost variants - all should be blocked
+        test_origins = [
+            "http://localhost:3000",
+            "https://localhost",
+            "http://test.localhost",
+            "http://127.0.0.1:8000",
+            "http://[::1]:3000",
+        ]
+
+        for origin in test_origins:
+            with self.subTest(origin=origin):
+                environ = self._create_environ(origin=origin)
+                middleware(environ, self.start_response)
+
+                # Should return 403
+                if self.start_response.called:
+                    call_args = self.start_response.call_args[0]
+                    self.assertIn(
+                        "403", call_args[0], f"Should have blocked origin: {origin}"
+                    )
+                self.start_response.reset_mock()
+
+    def test_missing_allowed_origins_uses_defaults(self):
+        """Test that missing allowed_origins key uses default local hosts"""
+        config = {}  # No allowed_origins key at all
+        middleware = self._create_middleware(config)
+
+        # Test localhost variants - should be allowed with defaults
         test_origins = [
             "http://localhost:3000",
             "https://localhost",
@@ -299,7 +326,7 @@ class TestOriginValidation(unittest.TestCase):
                 if self.start_response.called:
                     call_args = self.start_response.call_args[0]
                     self.assertNotIn(
-                        "403", call_args[0], f"Failed for origin: {origin}"
+                        "403", call_args[0], f"Should have allowed origin: {origin}"
                     )
                 self.start_response.reset_mock()
 
