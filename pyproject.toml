@@ -1,6 +1,6 @@
 [build-system]
-requires = ["hatchling"]
 build-backend = "hatchling.build"
+requires = [ "hatchling" ]
 
 [project]
 name = "tidewave"
@@ -8,16 +8,24 @@ version = "0.1.0"
 description = "Python WSGI middleware for Model Context Protocol (MCP)"
 readme = "README.md"
 requires-python = ">=3.9"
-dependencies = ["pydantic>=2.0.0"]
+classifiers = [
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+dependencies = [ "pydantic>=2" ]
 
 [dependency-groups]
 dev = [
-  "pytest>=7.0.0",
-  "ruff>=0.12.9",
-  "flask>=2.0.0",
-  "fastapi>=0.100.0",
-  "uvicorn>=0.20.0",
   "django>=4.2.23",
+  "fastapi>=0.100",
+  "flask>=2",
+  "pytest>=7",
+  "ruff>=0.12.9",
+  "uvicorn>=0.20",
 ]
 
 [tool.ruff]
@@ -39,7 +47,16 @@ lint.select = [
 ]
 lint.isort.combine-as-imports = true
 lint.isort.known-first-party = [ "tidewave" ]
-lint.isort.section-order = [ "future", "standard-library", "django", "fastapi", "flask", "third-party", "first-party", "local-folder" ]
+lint.isort.section-order = [
+  "future",
+  "standard-library",
+  "django",
+  "fastapi",
+  "flask",
+  "third-party",
+  "first-party",
+  "local-folder",
+]
 lint.isort.sections.django = [ "django" ]
 lint.isort.sections.fastapi = [ "fastapi" ]
 lint.isort.sections.flask = [ "flask" ]
