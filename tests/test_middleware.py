@@ -3,17 +3,18 @@ Tests for MCP WSGI Middleware
 """
 
 import json
+import struct
 import unittest
 from io import BytesIO
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from tidewave.mcp_handler import MCPHandler
 from tidewave.middleware import Middleware
 from tidewave.tools import add, multiply
 
 
-class TestMiddleware(unittest.TestCase):
-    """Test MCP middleware functionality"""
+class TestMiddlewareBase(unittest.TestCase):
+    """Base class for testing MCP middleware functionality"""
 
     def setUp(self):
         """Set up test fixtures"""
@@ -26,16 +27,13 @@ class TestMiddleware(unittest.TestCase):
             "allowed_origins": ["localhost"],
         }
 
-        tool_functions = [add, multiply]
-        self.mcp_handler = MCPHandler(tool_functions)
-        self.middleware = Middleware(self.demo_app, self.mcp_handler, self.config)
+        self.mcp_handler = MCPHandler([add, multiply])
+        self.middleware = self._create_middleware(self.config)
         self.start_response = Mock()
 
     def _create_middleware(self, config):
         """Helper method to create middleware with tools"""
-        tool_functions = [add, multiply]
-        mcp_handler = MCPHandler(tool_functions)
-        return Middleware(self.demo_app, mcp_handler, config)
+        return Middleware(self.demo_app, self.mcp_handler, config)
 
     def _create_environ(
         self, path="/", method="GET", body=None, remote_addr="127.0.0.1", origin=None
@@ -53,6 +51,10 @@ class TestMiddleware(unittest.TestCase):
             environ["HTTP_ORIGIN"] = origin
 
         return environ
+
+
+class TestMiddleware(TestMiddlewareBase):
+    """Test MCP middleware functionality"""
 
     def test_non_mcp_route_passes_through(self):
         """Test that non-MCP routes pass through to the wrapped app"""
@@ -84,6 +86,22 @@ class TestMiddleware(unittest.TestCase):
 
         # Check empty body
         self.assertEqual(result, [b""])
+
+    def test_home_route_returns_html(self):
+        """Test that /tidewave/ returns a valid HTML response"""
+        result = self.middleware._handle_home_route(self.start_response)
+
+        self.start_response.assert_called_once()
+        call_args = self.start_response.call_args[0]
+        self.assertIn("200", call_args[0])
+        headers = call_args[1]
+        content_type = next(
+            (value for name, value in headers if name == "Content-Type"), None
+        )
+        self.assertEqual(content_type, "text/html")
+        self.assertTrue(result)
+        self.assertIsInstance(result[0], bytes)
+        self.assertIn(b"tidewave:config", result[0].lower())
 
     def test_mcp_get_returns_405(self):
         """Test that GET requests to /tidewave/mcp return 405"""
@@ -207,39 +225,14 @@ class TestMiddleware(unittest.TestCase):
         self.demo_app.assert_called_once_with(environ, self.start_response)
 
 
-class TestOriginValidation(unittest.TestCase):
+class TestOriginValidation(TestMiddlewareBase):
     """Test origin validation with Django ALLOWED_HOSTS pattern"""
-
-    def setUp(self):
-        """Set up test fixtures"""
-        self.demo_app = Mock()
-        self.demo_app.return_value = [b"demo response"]
-        self.start_response = Mock()
-
-    def _create_middleware(self, config):
-        """Helper method to create middleware with tools"""
-        tool_functions = [add, multiply]
-        mcp_handler = MCPHandler(tool_functions)
-        return Middleware(self.demo_app, mcp_handler, config)
-
-    def _create_environ(self, path="/tidewave/mcp", origin=None):
-        """Create WSGI environ dict for testing"""
-        environ = {
-            "REQUEST_METHOD": "POST",
-            "PATH_INFO": path,
-            "REMOTE_ADDR": "127.0.0.1",
-            "wsgi.input": BytesIO(b""),
-            "CONTENT_LENGTH": "0",
-        }
-        if origin:
-            environ["HTTP_ORIGIN"] = origin
-        return environ
 
     def test_no_origin_header_allowed(self):
         """Test that missing Origin header is allowed"""
         config = {"allowed_origins": ["example.com"]}
         middleware = self._create_middleware(config)
-        environ = self._create_environ()  # No origin header
+        environ = self._create_environ("/tidewave/mcp", method="POST")
 
         middleware(environ, self.start_response)
 
@@ -266,7 +259,9 @@ class TestOriginValidation(unittest.TestCase):
 
         for origin in test_origins:
             with self.subTest(origin=origin):
-                environ = self._create_environ(origin=origin)
+                environ = self._create_environ(
+                    "/tidewave/mcp", method="POST", origin=origin
+                )
                 middleware(environ, self.start_response)
 
                 # Should return 403
@@ -293,7 +288,9 @@ class TestOriginValidation(unittest.TestCase):
 
         for origin in test_origins:
             with self.subTest(origin=origin):
-                environ = self._create_environ(origin=origin)
+                environ = self._create_environ(
+                    "/tidewave/mcp", method="POST", origin=origin
+                )
                 middleware(environ, self.start_response)
 
                 # Should not return 403
@@ -320,7 +317,9 @@ class TestOriginValidation(unittest.TestCase):
 
         for origin in allowed_origins:
             with self.subTest(origin=origin):
-                environ = self._create_environ(origin=origin)
+                environ = self._create_environ(
+                    "/tidewave/mcp", method="POST", origin=origin
+                )
                 middleware(environ, self.start_response)
 
                 # Should not return 403
@@ -340,7 +339,9 @@ class TestOriginValidation(unittest.TestCase):
 
         for origin in disallowed_origins:
             with self.subTest(origin=origin):
-                environ = self._create_environ(origin=origin)
+                environ = self._create_environ(
+                    "/tidewave/mcp", method="POST", origin=origin
+                )
                 middleware(environ, self.start_response)
 
                 # Should return 403
@@ -365,7 +366,9 @@ class TestOriginValidation(unittest.TestCase):
 
         for origin in allowed_origins:
             with self.subTest(origin=origin):
-                environ = self._create_environ(origin=origin)
+                environ = self._create_environ(
+                    "/tidewave/mcp", method="POST", origin=origin
+                )
                 middleware(environ, self.start_response)
 
                 # Should not return 403
@@ -385,7 +388,9 @@ class TestOriginValidation(unittest.TestCase):
 
         for origin in disallowed_origins:
             with self.subTest(origin=origin):
-                environ = self._create_environ(origin=origin)
+                environ = self._create_environ(
+                    "/tidewave/mcp", method="POST", origin=origin
+                )
                 middleware(environ, self.start_response)
 
                 # Should return 403
@@ -408,7 +413,9 @@ class TestOriginValidation(unittest.TestCase):
 
         for origin in test_origins:
             with self.subTest(origin=origin):
-                environ = self._create_environ(origin=origin)
+                environ = self._create_environ(
+                    "/tidewave/mcp", method="POST", origin=origin
+                )
                 middleware(environ, self.start_response)
 
                 # Should not return 403
@@ -433,7 +440,9 @@ class TestOriginValidation(unittest.TestCase):
 
         for origin in allowed_origins:
             with self.subTest(origin=origin):
-                environ = self._create_environ(origin=origin)
+                environ = self._create_environ(
+                    "/tidewave/mcp", method="POST", origin=origin
+                )
                 middleware(environ, self.start_response)
 
                 # Should not return 403
@@ -443,6 +452,240 @@ class TestOriginValidation(unittest.TestCase):
                         "403", call_args[0], f"Should allow IPv6: {origin}"
                     )
                 self.start_response.reset_mock()
+
+
+class TestShellHandler(TestMiddlewareBase):
+    def test_non_post_method(self):
+        """Test that non-POST methods are rejected"""
+        environ = self._create_environ("/tidewave/shell", method="GET")
+        result = self.middleware(environ, self.start_response)
+
+        # Should return 405
+        call_args = self.start_response.call_args[0]
+        self.assertIn("405", call_args[0], "Should block non-POST methods")
+        self.assertEqual(result, [b"Method Not Allowed"])
+        self.start_response.reset_mock()
+
+    def test_empty_body(self):
+        """Test that empty request bodies return 400"""
+        environ = self._create_environ("/tidewave/shell", method="POST", body="")
+        result = self.middleware(environ, self.start_response)
+
+        call_args = self.start_response.call_args[0]
+        self.assertIn("400", call_args[0], "Should block empty request bodies")
+        self.assertEqual(result, [b"Command body is required"])
+        self.start_response.reset_mock()
+
+    def test_invalid_json(self):
+        """Test that invalid JSON bodies return 400"""
+        environ = self._create_environ(
+            "/tidewave/shell", method="POST", body="invalid_json"
+        )
+        result = self.middleware(environ, self.start_response)
+
+        call_args = self.start_response.call_args[0]
+        self.assertIn("400", call_args[0], "Should block invalid JSON bodies")
+        self.assertEqual(result, [b"Invalid JSON in request body"])
+        self.start_response.reset_mock()
+
+    def test_missing_command_field(self):
+        """Test that missing command field returns 400"""
+        body = json.dumps({"other_field": "value"})
+        environ = self._create_environ("/tidewave/shell", method="POST", body=body)
+
+        result = self.middleware(environ, self.start_response)
+
+        call_args = self.start_response.call_args[0]
+        self.assertIn("400", call_args[0], "Should block invalid JSON bodies")
+        self.assertEqual(result, [b"Command field is required"])
+        self.start_response.reset_mock()
+
+    def test_empty_command_field(self):
+        """Test that empty command field returns 400"""
+        body = json.dumps({"command": ""})
+        environ = self._create_environ("/tidewave/shell", method="POST", body=body)
+
+        result = self.middleware(environ, self.start_response)
+
+        call_args = self.start_response.call_args[0]
+        self.assertIn("400", call_args[0], "Should block invalid JSON bodies")
+        self.assertEqual(result, [b"Command field is required"])
+        self.start_response.reset_mock()
+
+    @patch("tidewave.middleware.Middleware._execute_command")
+    def test_valid_command(self, mock_execute):
+        """Test that valid command starts execution"""
+        mock_execute.return_value = [b"test output"]
+
+        body = json.dumps({"command": "echo hello"})
+        environ = self._create_environ("/tidewave/shell", method="POST", body=body)
+
+        result = self.middleware(environ, self.start_response)
+
+        call_args = self.start_response.call_args[0]
+        self.assertIn("200", call_args[0], "Should allow valid commands")
+        mock_execute.assert_called_once_with("echo hello")
+        self.assertEqual(result, [b"test output"])
+        self.start_response.reset_mock()
+
+
+class TestExecuteCommand(TestMiddlewareBase):
+    """Test suite for _execute_command function"""
+
+    def _parse_binary_chunks(self, data):
+        """Helper to parse binary chunks into (type, payload) tuples"""
+        chunks = []
+        offset = 0
+
+        while offset < len(data):
+            if offset + 5 > len(data):
+                break
+
+            # Unpack type (1 byte) and length (4 bytes)
+            chunk_type, length = struct.unpack("!BL", data[offset : offset + 5])
+            offset += 5
+
+            if offset + length > len(data):
+                break
+
+            payload = data[offset : offset + length]
+            offset += length
+
+            chunks.append((chunk_type, payload))
+
+        return chunks
+
+    @patch("subprocess.Popen")
+    def test_successful_command_execution(self, mock_popen):
+        """Test successful command execution with output"""
+        # Mock process
+        mock_process = Mock()
+        mock_process.stdout.read.side_effect = [b"hello world\n", b""]
+        mock_process.poll.return_value = 0
+        mock_process.wait.return_value = 0  # Exit code 0
+        mock_process.stdin = Mock()
+        mock_popen.return_value = mock_process
+
+        # Mock select to indicate data is ready
+        with patch("select.select") as mock_select:
+            mock_select.side_effect = [
+                ([mock_process.stdout], [], []),  # Data ready, read data.
+                ([], [], []),  # No more data, process.poll() will indicate completion.
+            ]
+
+            # Execute command
+            result = b"".join(self.middleware._execute_command("echo hello"))
+
+        # Parse binary chunks
+        chunks = self._parse_binary_chunks(result)
+
+        # Should have 2 chunks: output + status
+        self.assertEqual(len(chunks), 2)
+
+        # First chunk: output (type 0)
+        output_type, output_data = chunks[0]
+        self.assertEqual(output_type, 0)
+        self.assertEqual(output_data, b"hello world\n")
+
+        # Second chunk: status (type 1)
+        status_type, status_data = chunks[1]
+        self.assertEqual(status_type, 1)
+        status_json = json.loads(status_data.decode("utf-8"))
+        self.assertEqual(status_json["status"], 0)
+
+        # Verify subprocess was called correctly
+        mock_popen.assert_called_once_with(
+            "echo hello",
+            stdout=unittest.mock.ANY,
+            stderr=unittest.mock.ANY,
+            stdin=unittest.mock.ANY,
+            shell=True,
+        )
+        mock_process.stdin.close.assert_called_once()
+
+    @patch("subprocess.Popen")
+    def test_command_with_error_exit_code(self, mock_popen):
+        """Test command that exits with error code"""
+        mock_process = Mock()
+        mock_process.stdout.read.side_effect = [b"error message\n", b""]
+        mock_process.poll.return_value = 0
+        mock_process.wait.return_value = 1  # Exit code 1
+        mock_process.stdin = Mock()
+        mock_popen.return_value = mock_process
+
+        with patch("select.select") as mock_select:
+            mock_select.side_effect = [
+                ([mock_process.stdout], [], []),  # Data ready, read data.
+                ([], [], []),  # No more data, process.poll() will indicate completion.
+            ]
+
+            result = b"".join(self.middleware._execute_command("false"))
+
+        chunks = self._parse_binary_chunks(result)
+
+        # Check status chunk has exit code 1
+        status_type, status_data = chunks[1]
+        self.assertEqual(status_type, 1)
+        status_json = json.loads(status_data.decode("utf-8"))
+        self.assertEqual(status_json["status"], 1)
+
+    @patch("subprocess.Popen")
+    def test_command_execution_exception(self, mock_popen):
+        """Test handling of subprocess exceptions"""
+        mock_popen.side_effect = Exception("Command failed")
+
+        result = b"".join(self.middleware._execute_command("invalid_command"))
+        chunks = self._parse_binary_chunks(result)
+
+        # Should only have error status chunk
+        self.assertEqual(len(chunks), 1)
+
+        status_type, status_data = chunks[0]
+        self.assertEqual(status_type, 1)
+        status_json = json.loads(status_data.decode("utf-8"))
+        self.assertEqual(status_json["status"], 213)
+
+    @patch("subprocess.Popen")
+    def test_list_command(self, mock_popen):
+        """Test command passed as list instead of string"""
+        mock_process = Mock()
+        mock_process.stdout.read.side_effect = [b"output", b""]
+        mock_process.poll.return_value = None
+        mock_process.wait.return_value = 0
+        mock_process.stdin = Mock()
+        mock_popen.return_value = mock_process
+
+        with patch("select.select") as mock_select:
+            mock_select.side_effect = [([mock_process.stdout], [], []), ([], [], [])]
+
+            list(self.middleware._execute_command(["echo", "hello"]))
+
+        # Verify shell=False for list commands
+        mock_popen.assert_called_once_with(
+            ["echo", "hello"],
+            stdout=unittest.mock.ANY,
+            stderr=unittest.mock.ANY,
+            stdin=unittest.mock.ANY,
+            shell=False,
+        )
+
+    @patch("select.select", side_effect=AttributeError)
+    @patch("subprocess.Popen")
+    def test_windows_fallback(self, mock_popen, mock_select):
+        """Test Windows fallback when select is not available"""
+        mock_process = Mock()
+        mock_process.stdout.read.side_effect = [b"windows output", b""]
+        mock_process.wait.return_value = 0
+        mock_process.stdin = Mock()
+        mock_popen.return_value = mock_process
+
+        result = b"".join(self.middleware._execute_command("dir"))
+        chunks = self._parse_binary_chunks(result)
+
+        self.assertEqual(len(chunks), 2)
+        output_type, output_data = chunks[0]
+        self.assertEqual(output_type, 0)
+        self.assertEqual(output_data, b"windows output")
 
 
 if __name__ == "__main__":

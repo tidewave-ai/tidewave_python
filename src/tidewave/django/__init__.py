@@ -9,9 +9,9 @@ from django.conf import settings
 from django.http import HttpResponse
 from django.utils.deprecation import MiddlewareMixin
 
-from ..mcp_handler import MCPHandler
-from ..middleware import Middleware as BaseMiddleware
-from ..tools import add, multiply
+from tidewave import tools
+from tidewave.mcp_handler import MCPHandler
+from tidewave.middleware import Middleware as BaseMiddleware
 
 
 class Middleware(MiddlewareMixin):
@@ -42,7 +42,7 @@ class Middleware(MiddlewareMixin):
         self.get_response = get_response
 
         # Create MCP handler with tools
-        tool_functions = [add, multiply]
+        tool_functions = [tools.add, tools.multiply]
         self.mcp_handler = MCPHandler(tool_functions)
 
         # Create dummy WSGI app for base middleware
@@ -67,7 +67,25 @@ class Middleware(MiddlewareMixin):
         if not allowed_hosts and debug:
             allowed_hosts = [".localhost", "127.0.0.1", "::1"]
 
-        config = {"internal_ips": internal_ips, "allowed_origins": allowed_hosts}
+        # Grab Tidewave client URL
+        client_url = getattr(settings, "TIDEWAVE", {}).get(
+            "client_url", "https://tidewave.ai/tc/tc.js"
+        )
+
+        # Determine Django project name
+        project_name = "django_app"
+        try:
+            project_name = settings.SETTINGS_MODULE.split(".")[0]
+        except AttributeError:
+            pass
+
+        config = {
+            "framework_type": "django",
+            "project_name": project_name,
+            "client_url": client_url,
+            "internal_ips": internal_ips,
+            "allowed_origins": allowed_hosts,
+        }
 
         return config
 
