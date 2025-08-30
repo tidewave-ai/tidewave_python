@@ -7,7 +7,7 @@ name = "tidewave"
 version = "0.1.0"
 description = "Python WSGI middleware for Model Context Protocol (MCP)"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 dependencies = ["pydantic>=2.0.0"]
 
 [dependency-groups]
