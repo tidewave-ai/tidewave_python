@@ -6,8 +6,9 @@ import json
 import unittest
 from io import BytesIO
 from unittest.mock import Mock
-from tidewave.middleware import Middleware
+
 from tidewave.mcp_handler import MCPHandler
+from tidewave.middleware import Middleware
 from tidewave.tools import add, multiply
 
 
@@ -115,7 +116,7 @@ class TestMCPIntegration(unittest.TestCase):
             "jsonrpc": "2.0",
             "method": "initialize",
             "id": 1,
-            "params": {"protocolVersion": "2025-03-26"}
+            "params": {"protocolVersion": "2025-03-26"},
         }
         body = json.dumps(message)
         environ = self._create_environ(body)
@@ -140,7 +141,7 @@ class TestMCPIntegration(unittest.TestCase):
             "jsonrpc": "2.0",
             "method": "initialize",
             "id": 1,
-            "params": {"protocolVersion": "2020-01-01"}  # Old version
+            "params": {"protocolVersion": "2020-01-01"},  # Old version
         }
         body = json.dumps(message)
         environ = self._create_environ(body)
@@ -161,7 +162,7 @@ class TestMCPIntegration(unittest.TestCase):
             "jsonrpc": "2.0",
             "method": "initialize",
             "id": 1,
-            "params": {"protocolVersion": "2025-12-31"}  # Future version
+            "params": {"protocolVersion": "2025-12-31"},  # Future version
         }
         body = json.dumps(message)
         environ = self._create_environ(body)
@@ -228,7 +229,7 @@ class TestMCPIntegration(unittest.TestCase):
         message = {
             "jsonrpc": "2.0",
             "method": "notifications/cancelled",
-            "params": {"requestId": "abc123", "reason": "user_cancelled"}
+            "params": {"requestId": "abc123", "reason": "user_cancelled"},
             # No 'id' field - this is a notification
         }
         body = json.dumps(message)

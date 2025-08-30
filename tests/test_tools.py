@@ -2,9 +2,10 @@
 Tests for MCPTool base class
 """
 
-import unittest
 import json
-from typing import List, Optional
+import unittest
+from typing import Optional
+
 from tidewave.tools.base import MCPTool
 
 
@@ -213,7 +214,7 @@ class TestMCPTool(unittest.TestCase):
     def test_tool_with_list_type(self):
         """Test tool with List type annotation"""
 
-        def process_items(items: List[str]) -> str:
+        def process_items(items: list[str]) -> str:
             """Process a list of string items"""
             return f"Processed {len(items)} items: {', '.join(items)}"
 
@@ -233,7 +234,9 @@ class TestMCPTool(unittest.TestCase):
 
         # Test calling with list
         result1 = tool.validate_and_call({"items": ["apple", "banana", "cherry"]})
-        self.assertIn("Processed 3 items: apple, banana, cherry", result1["content"][0]["text"])
+        self.assertIn(
+            "Processed 3 items: apple, banana, cherry", result1["content"][0]["text"]
+        )
 
         # Test calling with empty list
         result2 = tool.validate_and_call({"items": []})

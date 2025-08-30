@@ -1,10 +1,13 @@
 """
 uv run python examples/fastapi_app.py
 """
+# ruff: noqa: T201 -- allow print statements
 
 import asyncio
+
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
+
 from tidewave.fastapi import mount
 
 

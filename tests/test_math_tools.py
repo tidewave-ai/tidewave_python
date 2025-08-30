@@ -3,6 +3,7 @@ Tests for individual math tools
 """
 
 import unittest
+
 from tidewave.tools.base import MCPTool
 from tidewave.tools.math_tools import add, multiply
 

@@ -3,7 +3,9 @@ Basic tests for FastAPI integration
 """
 
 import unittest
+
 from fastapi import FastAPI
+
 from tidewave.fastapi import mount
 
 
