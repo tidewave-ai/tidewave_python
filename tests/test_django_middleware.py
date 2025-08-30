@@ -7,7 +7,7 @@ from unittest.mock import Mock
 
 import django
 from django.conf import settings
-from django.test import RequestFactory
+from django.test import RequestFactory, override_settings
 
 # Configure Django settings for testing
 if not settings.configured:
@@ -46,7 +46,7 @@ class TestDjangoMiddleware(unittest.TestCase):
 
     def test_config_with_internal_ips(self):
         """Test that middleware uses Django's INTERNAL_IPS setting"""
-        with self.settings(INTERNAL_IPS=["192.168.1.1", "10.0.0.1"]):
+        with override_settings(INTERNAL_IPS=["192.168.1.1", "10.0.0.1"]):
             middleware = Middleware(self.get_response)
             config = middleware._build_config()
 
@@ -54,7 +54,7 @@ class TestDjangoMiddleware(unittest.TestCase):
 
     def test_config_with_allowed_hosts_debug_false(self):
         """Test that middleware uses ALLOWED_HOSTS when DEBUG is False"""
-        with self.settings(
+        with override_settings(
             ALLOWED_HOSTS=["example.com", "api.example.com"], DEBUG=False
         ):
             middleware = Middleware(self.get_response)
@@ -69,13 +69,38 @@ class TestDjangoMiddleware(unittest.TestCase):
         Test that middleware defaults to local origins when ALLOWED_HOSTS is empty
         and DEBUG is True
         """
-        with self.settings(ALLOWED_HOSTS=[], DEBUG=True):
+        with override_settings(ALLOWED_HOSTS=[], DEBUG=True):
             middleware = Middleware(self.get_response)
             config = middleware._build_config()
 
             self.assertEqual(
                 config["allowed_origins"], [".localhost", "127.0.0.1", "::1"]
             )
+
+    def test_config_with_client_url(self):
+        """Test that middleware uses CLIENT_URL setting"""
+        with override_settings(
+            TIDEWAVE={"client_url": "https://tidewave.ai/client.js"}
+        ):
+            middleware = Middleware(self.get_response)
+            config = middleware._build_config()
+
+            self.assertEqual(config["client_url"], "https://tidewave.ai/client.js")
+
+    def test_config_with_project_name(self):
+        """Test that middleware uses detects project name"""
+        with override_settings(SETTINGS_MODULE="tidewave_django.settings"):
+            middleware = Middleware(self.get_response)
+            config = middleware._build_config()
+
+            self.assertEqual(config["project_name"], "tidewave_django")
+
+        # Test fallback.
+        with override_settings(SETTINGS_MODULE=None):
+            middleware = Middleware(self.get_response)
+            config = middleware._build_config()
+
+            self.assertEqual(config["project_name"], "django_app")
 
     def test_non_tidewave_request_passes_through(self):
         """Test that non-tidewave requests pass through unchanged"""
@@ -102,12 +127,6 @@ class TestDjangoMiddleware(unittest.TestCase):
         self.assertEqual(environ["CONTENT_TYPE"], "application/json")
         self.assertIn("wsgi.input", environ)
         self.assertIn("REMOTE_ADDR", environ)
-
-    def settings(self, **kwargs):
-        """Helper method to override Django settings"""
-        from django.test import override_settings
-
-        return override_settings(**kwargs)
 
 
 if __name__ == "__main__":
