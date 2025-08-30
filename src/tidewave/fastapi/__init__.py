@@ -2,16 +2,18 @@
 FastAPI-specific integration for Tidewave MCP
 """
 
-from typing import Dict, Any, Optional
+from typing import Any
+
 from fastapi import FastAPI
+
 from starlette.middleware.wsgi import WSGIMiddleware
 
-from ..middleware import Middleware
 from ..mcp_handler import MCPHandler
+from ..middleware import Middleware
 from ..tools import add, multiply
 
 
-def mount(app: FastAPI, config: Dict[str, Any] = {}):
+def mount(app: FastAPI, config: dict[str, Any] = None):
     """Mount Tidewave middleware to a FastAPI application
 
     Args:
@@ -20,6 +22,8 @@ def mount(app: FastAPI, config: Dict[str, Any] = {}):
             - internal_ips: list of allowed IP addresses (default ["127.0.0.1"])
             - allowed_origins: list of allowed origin hosts (default [])
     """
+
+    config = config or {}
 
     # Create WSGI app for MCP handling
     def wsgi_app(environ, start_response):

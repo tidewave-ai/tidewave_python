@@ -4,6 +4,7 @@ Basic tests for Flask middleware
 
 import unittest
 from unittest.mock import Mock
+
 from tidewave.flask import Middleware
 
 

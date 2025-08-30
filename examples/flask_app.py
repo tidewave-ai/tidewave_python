@@ -1,8 +1,10 @@
 """
 uv run python examples/flask_app.py
 """
+# ruff: noqa: T201 -- allow print statements
 
 from flask import Flask
+
 from tidewave.flask import Middleware
 
 

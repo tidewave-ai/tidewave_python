@@ -5,7 +5,7 @@ Handles MCP-specific message processing and tool management
 
 import json
 import logging
-from typing import Dict, Any, Optional, List, Callable
+from typing import Any, Callable, Optional
 
 from .tools.base import MCPTool
 
@@ -16,7 +16,7 @@ class MCPHandler:
     PROTOCOL_VERSION = "2025-03-26"
     VERSION = "1.0.0"
 
-    def __init__(self, tool_functions: List[Callable]):
+    def __init__(self, tool_functions: list[Callable]):
         """Initialize MCP handler
 
         Args:
@@ -26,7 +26,7 @@ class MCPHandler:
         self.logger = logging.getLogger(__name__)
         self._init_tools(tool_functions)
 
-    def _init_tools(self, tool_functions: List[Callable]):
+    def _init_tools(self, tool_functions: list[Callable]):
         """Initialize available MCP tools from provided functions"""
         self.tools = {}
         for func in tool_functions:
@@ -38,7 +38,7 @@ class MCPHandler:
                 "tool_instance": tool,
             }
 
-    def handle_request(self, environ: Dict[str, Any], start_response: Callable):
+    def handle_request(self, environ: dict[str, Any], start_response: Callable):
         """Handle MCP POST request"""
         try:
             # Read request body
@@ -82,8 +82,12 @@ class MCPHandler:
                 start_response, None, -32603, "Internal error"
             )
 
-    def _validate_jsonrpc_message(self, message: Dict[str, Any]) -> Optional[str]:
-        """Validate JSON-RPC 2.0 message format. Returns error message if invalid, None if valid."""
+    def _validate_jsonrpc_message(self, message: dict[str, Any]) -> Optional[str]:
+        """
+        Validate JSON-RPC 2.0 message format.
+
+        Returns error message if invalid, None if valid.
+        """
         if not isinstance(message, dict):
             return "Message must be a JSON object"
 
@@ -106,7 +110,7 @@ class MCPHandler:
         else:
             return "Invalid JSON-RPC message structure"
 
-    def _handle_message(self, message: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def _handle_message(self, message: dict[str, Any]) -> Optional[dict[str, Any]]:
         """Handle MCP message routing"""
         method = message.get("method")
         request_id = message.get("id")
@@ -143,13 +147,13 @@ class MCPHandler:
                 },
             }
 
-    def _handle_ping(self, request_id: Any) -> Dict[str, Any]:
+    def _handle_ping(self, request_id: Any) -> dict[str, Any]:
         """Handle ping request"""
         return {"jsonrpc": "2.0", "id": request_id, "result": {}}
 
     def _handle_initialize(
-        self, request_id: Any, params: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, request_id: Any, params: dict[str, Any]
+    ) -> dict[str, Any]:
         """Handle initialize request"""
         client_version = params.get("protocolVersion")
 
@@ -163,7 +167,10 @@ class MCPHandler:
             return self._create_error_response(
                 request_id,
                 -32602,
-                f"Unsupported protocol version. Server supports {self.PROTOCOL_VERSION} or later",
+                (
+                    "Unsupported protocol version. "
+                    f"Server supports {self.PROTOCOL_VERSION} or later"
+                ),
             )
 
         return {
@@ -178,8 +185,8 @@ class MCPHandler:
         }
 
     def _handle_list_tools(
-        self, request_id: Any, params: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, request_id: Any, params: dict[str, Any]
+    ) -> dict[str, Any]:
         """Handle tools/list request"""
         return {
             "jsonrpc": "2.0",
@@ -188,8 +195,8 @@ class MCPHandler:
         }
 
     def _handle_call_tool(
-        self, request_id: Any, params: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, request_id: Any, params: dict[str, Any]
+    ) -> dict[str, Any]:
         """Handle tools/call request"""
         tool_name = params.get("name")
         arguments = params.get("arguments", {})
@@ -209,7 +216,7 @@ class MCPHandler:
             result = tool["tool_instance"].validate_and_call(arguments)
 
             if "error" in result:
-                # Tool error should be returned as successful response with isError: true
+                # Error should be returned as successful response with isError: true
                 return {
                     "jsonrpc": "2.0",
                     "id": request_id,
@@ -234,7 +241,7 @@ class MCPHandler:
                 },
             }
 
-    def _get_tool_list(self) -> List[Dict[str, Any]]:
+    def _get_tool_list(self) -> list[dict[str, Any]]:
         """Get list of available tools"""
         return [
             {
@@ -247,7 +254,7 @@ class MCPHandler:
 
     def _create_error_response(
         self, request_id: Any, code: int, message: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Create JSON-RPC error response"""
         return {
             "jsonrpc": "2.0",
@@ -256,7 +263,7 @@ class MCPHandler:
         }
 
     def _send_json_response(
-        self, start_response: Callable, data: Dict[str, Any], status: int = 200
+        self, start_response: Callable, data: dict[str, Any], status: int = 200
     ):
         """Send JSON response"""
         json_data = json.dumps(data)
@@ -265,7 +272,8 @@ class MCPHandler:
             ("Content-Length", str(len(json_data))),
         ]
 
-        status_text = f"{status} {'OK' if status == 200 else 'Accepted' if status == 202 else 'Error'}"
+        status_map = {200: "OK", 202: "Accepted"}
+        status_text = f"{status} {status_map.get(status, 'Error')}"
         start_response(status_text, response_headers)
         return [json_data.encode("utf-8")]
 

@@ -6,8 +6,9 @@ import json
 import unittest
 from io import BytesIO
 from unittest.mock import Mock
-from tidewave.middleware import Middleware
+
 from tidewave.mcp_handler import MCPHandler
+from tidewave.middleware import Middleware
 from tidewave.tools import add, multiply
 
 
@@ -114,12 +115,13 @@ class TestMiddleware(unittest.TestCase):
         config = {"internal_ips": ["127.0.0.1", "192.168.1.100"]}
         middleware = self._create_middleware(config)
         environ = self._create_environ(
-            "/tidewave/mcp", "POST",
+            "/tidewave/mcp",
+            "POST",
             body='{"jsonrpc": "2.0", "method": "ping", "id": 1}',
-            remote_addr="192.168.1.100"
+            remote_addr="192.168.1.100",
         )
 
-        result = middleware(environ, self.start_response)
+        middleware(environ, self.start_response)
 
         # Should return 200 OK (ping response)
         call_args = self.start_response.call_args[0]
@@ -441,6 +443,7 @@ class TestOriginValidation(unittest.TestCase):
                         "403", call_args[0], f"Should allow IPv6: {origin}"
                     )
                 self.start_response.reset_mock()
+
 
 if __name__ == "__main__":
     unittest.main()

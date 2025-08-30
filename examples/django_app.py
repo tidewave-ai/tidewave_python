@@ -1,33 +1,34 @@
 """
 uv run python examples/django_app.py
 """
+# ruff: noqa: T201 -- allow print statements
 
 import django
 from django.conf import settings
+from django.core.wsgi import get_wsgi_application
 from django.http import HttpResponse
 from django.urls import path
-from django.core.wsgi import get_wsgi_application
 
 
 def create_app():
     """Create a Django app configuration"""
     settings.configure(
         DEBUG=True,
-        SECRET_KEY='django-insecure-example-key-not-for-production',
+        SECRET_KEY="django-insecure-example-key-not-for-production",
         ROOT_URLCONF=__name__,
         MIDDLEWARE=[
-            'django.middleware.security.SecurityMiddleware',
-            'django.middleware.common.CommonMiddleware',
-            'tidewave.django.Middleware',
+            "django.middleware.security.SecurityMiddleware",
+            "django.middleware.common.CommonMiddleware",
+            "tidewave.django.Middleware",
         ],
         INTERNAL_IPS=[
-            '127.0.0.1',
-            '::1',
+            "127.0.0.1",
+            "::1",
         ],
         DATABASES={
-            'default': {
-                'ENGINE': 'django.db.backends.sqlite3',
-                'NAME': ':memory:',
+            "default": {
+                "ENGINE": "django.db.backends.sqlite3",
+                "NAME": ":memory:",
             }
         },
     )
@@ -48,7 +49,7 @@ def home_view(request):
 
 
 urlpatterns = [
-    path('', home_view, name='home'),
+    path("", home_view, name="home"),
 ]
 
 
@@ -61,12 +62,14 @@ def main():
     print("Press Ctrl+C to stop")
 
     from wsgiref.simple_server import make_server
+
     server = make_server("localhost", 8000, django_app)
 
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         print("\nShutting down server...")
+
 
 if __name__ == "__main__":
     main()

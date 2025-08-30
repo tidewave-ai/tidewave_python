@@ -3,12 +3,16 @@ Base MCP Tool functionality
 """
 
 import inspect
-from typing import Dict, Any, Callable, get_type_hints
-from pydantic import create_model, ValidationError
+from typing import Any, Callable, get_type_hints
+
+from pydantic import ValidationError, create_model
 
 
 class MCPTool:
-    """Base class for MCP tools that auto-generates JSON schema from Python function signatures"""
+    """
+    Base class for MCP tools that auto-generates JSON schema from Python
+    function signatures
+    """
 
     def __init__(self, func: Callable):
         self.func = func
@@ -24,7 +28,7 @@ class MCPTool:
             return lines[0].strip()
         return f"Execute {self.name} function"
 
-    def _generate_schema(self) -> Dict[str, Any]:
+    def _generate_schema(self) -> dict[str, Any]:
         """Generate JSON schema from function signature using pydantic"""
         sig = inspect.signature(self.func)
         type_hints = get_type_hints(self.func)
@@ -63,7 +67,7 @@ class MCPTool:
             "required": required_fields,
         }
 
-    def validate_and_call(self, args: Dict[str, Any]) -> Dict[str, Any]:
+    def validate_and_call(self, args: dict[str, Any]) -> dict[str, Any]:
         """Validate arguments using pydantic and call the function"""
         try:
             # Create validation model from schema
@@ -94,7 +98,7 @@ class MCPTool:
         except Exception as e:
             return {"error": f"Error executing {self.name}: {str(e)}"}
 
-    def to_mcp_tool(self) -> Dict[str, Any]:
+    def to_mcp_tool(self) -> dict[str, Any]:
         """Convert to MCP tool definition format"""
         return {
             "name": self.name,

@@ -2,10 +2,9 @@
 WSGI Middleware for basic routing and security
 """
 
-from http import HTTPStatus
-from typing import Dict, Any, Optional, Callable
-
 import logging
+from http import HTTPStatus
+from typing import Any, Callable, Optional
 from urllib.parse import urlparse
 
 from .mcp_handler import MCPHandler
@@ -18,9 +17,10 @@ class Middleware:
         self,
         app: Callable,
         mcp_handler: MCPHandler,
-        config: Optional[Dict[str, Any]] = None,
+        config: Optional[dict[str, Any]] = None,
     ):
-        """Initialize middleware
+        """
+        Initialize middleware
 
         Args:
             app: WSGI application to wrap
@@ -28,19 +28,23 @@ class Middleware:
             config: Configuration dict with options:
                 - internal_ips: list of allowed IP addresses (default ["127.0.0.1"])
                   * Empty list means no access allowed
-                - allowed_origins: list of allowed origin hosts (default []) following Django's ALLOWED_HOSTS pattern:
+                - allowed_origins: list of allowed origin hosts (default []) following
+                  Django's ALLOWED_HOSTS pattern:
                   * Exact matches (case-insensitive): 'example.com', 'www.example.com'
-                  * Subdomain wildcards: '.example.com' matches example.com and all subdomains
+                  * Subdomain wildcards: '.example.com' matches example.com and all
+                    subdomains
                   * Wildcard: '*' matches any host (use with caution)
-                  * Empty list defaults to local development hosts: ['.localhost', '127.0.0.1', '::1']
-                - use_script_name: bool (default False) - whether to read path from SCRIPT_NAME
+                  * Empty list defaults to local development hosts:
+                    ['.localhost', '127.0.0.1', '::1']
+                - use_script_name: bool (default False) - whether to read path
+                  from SCRIPT_NAME
         """
         self.app = app
         self.config = config or {}
         self.mcp_handler = mcp_handler
         self.logger = logging.getLogger(__name__)
 
-    def __call__(self, environ: Dict[str, Any], start_response: Callable):
+    def __call__(self, environ: dict[str, Any], start_response: Callable):
         """WSGI application entry point"""
         path_info = environ.get("PATH_INFO", "")
 
@@ -84,7 +88,7 @@ class Middleware:
         )
         return [b""]
 
-    def _check_security(self, environ: Dict[str, Any]) -> Optional[str]:
+    def _check_security(self, environ: dict[str, Any]) -> Optional[str]:
         """Check security constraints (IP and origin)"""
 
         # Check remote IP
@@ -92,8 +96,9 @@ class Middleware:
         if not self._is_ip_allowed(remote_addr):
             self.logger.warning(f"Access denied for IP: {remote_addr}")
             return (
-                "For security reasons, Tidewave only accepts requests from allowed IPs.\n\n"
-                f"Add '{remote_addr}' to the `internal_ips` configuration option to allow access."
+                f"For security reasons, Tidewave only accepts requests from allowed "
+                f"IPs.\n\nAdd '{remote_addr}' to the `internal_ips` configuration "
+                f"option to allow access."
             )
 
         # Check origin header (if present)
@@ -103,23 +108,26 @@ class Middleware:
             if hostname is None:
                 self.logger.warning(f"Malformed origin header: {origin}")
                 return (
-                    f"For security reasons, Tidewave only accepts requests from allowed hosts.\n\n"
-                    f"The origin header appears to be malformed: {origin}"
+                    f"For security reasons, Tidewave only accepts requests from allowed"
+                    f" hosts.\n\nThe origin header appears to be malformed: {origin}"
                 )
 
             host = hostname.lower()
             if not self._validate_allowed_origin(host):
                 self.logger.warning(f"Origin validation failed for host: {host}")
                 return (
-                    f"For security reasons, Tidewave only accepts requests from allowed hosts.\n\n"
-                    f"If you want to allow requests from '{host}', configure Tidewave with the `allowed_origins: ['{host}']` option."
+                    f"For security reasons, Tidewave only accepts requests from allowed"
+                    f" hosts.\n\nIf you want to allow requests from '{host}', configure"
+                    f" Tidewave with the `allowed_origins: ['{host}']` option."
                 )
 
         return None
 
     def _validate_allowed_origin(self, host: str) -> bool:
         """Validate if origin host is allowed using Django ALLOWED_HOSTS pattern"""
-        allowed_origins = self.config.get("allowed_origins", [".localhost", "127.0.0.1", "::1"])
+        allowed_origins = self.config.get(
+            "allowed_origins", [".localhost", "127.0.0.1", "::1"]
+        )
 
         # Default to local development hosts if empty (like Django's DEBUG mode)
         if not allowed_origins:
