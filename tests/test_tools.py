@@ -247,6 +247,64 @@ class TestMCPTool(unittest.TestCase):
         self.assertIn("error", result3)
         self.assertIn("Invalid arguments", result3["error"])
 
+    def test_hidden_parameters(self):
+        """Test function with mix of visible, hidden, and optional parameters"""
+
+        def complex_func(
+            required_visible: str,
+            optional_visible: int = 42,
+            *,
+            hidden_optional: bool = True,
+        ) -> str:
+            """Complex function with mixed parameter types"""
+            return f"{required_visible}-{optional_visible}-{hidden_optional}"
+
+        tool = MCPTool(complex_func)
+
+        # Schema should only show visible parameters
+        schema = tool.input_schema
+        self.assertIn("required_visible", schema["properties"])
+        self.assertIn("optional_visible", schema["properties"])
+        self.assertNotIn("hidden_optional", schema["properties"])
+        self.assertEqual(schema["required"], ["required_visible"])
+
+        result = tool.validate_and_call(
+            {
+                "required_visible": "test",
+                "optional_visible": 99,
+            }
+        )
+
+        self.assertIn("content", result)
+        self.assertIn("test-99-True", result["content"][0]["text"])
+
+        result = tool.validate_and_call(
+            {
+                "required_visible": "test",
+                "optional_visible": 99,
+                "hidden_optional": False,
+            }
+        )
+
+        self.assertIn("content", result)
+        self.assertIn("test-99-False", result["content"][0]["text"])
+
+    def test_hidden_parameter_requires_default(self):
+        """Test that hidden parameters without defaults raise an error"""
+
+        def func_with_required_hidden(visible: str, *, hidden_param: int) -> str:
+            """Function with required hidden parameter (should fail)"""
+            return f"visible: {visible}, hidden: {hidden_param}"
+
+        with self.assertRaises(ValueError) as context:
+            MCPTool(func_with_required_hidden)
+
+        self.assertIn(
+            "Hidden parameter 'hidden_param' must have a default value",
+            str(context.exception),
+        )
+        self.assertIn("Hidden parameters cannot be required", str(context.exception))
+
 
 if __name__ == "__main__":
     unittest.main()
