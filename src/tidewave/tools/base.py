@@ -29,7 +29,10 @@ class MCPTool:
         return f"Execute {self.name} function"
 
     def _generate_schema(self) -> dict[str, Any]:
-        """Generate JSON schema from function signature using pydantic"""
+        """
+        Generate JSON schema from function signature using pydantic, excluding hidden
+        parameters
+        """
         sig = inspect.signature(self.func)
         type_hints = get_type_hints(self.func)
 
@@ -38,6 +41,16 @@ class MCPTool:
         required_fields = []
 
         for param_name, param in sig.parameters.items():
+            # Skip keyword-only parameters (hidden parameters after *)
+            if param.kind == inspect.Parameter.KEYWORD_ONLY:
+                # Hidden parameters must have default values
+                if param.default == inspect.Parameter.empty:
+                    raise ValueError(
+                        f"Hidden parameter '{param_name}' must have a default value. "
+                        "Hidden parameters cannot be required."
+                    )
+                continue
+
             # Require explicit type hints
             if param_name not in type_hints:
                 raise ValueError(
@@ -71,6 +84,7 @@ class MCPTool:
         """Validate arguments using pydantic and call the function"""
         try:
             # Create validation model from schema
+            # - include ALL parameters (visible and hidden)
             sig = inspect.signature(self.func)
             type_hints = get_type_hints(self.func)
 
