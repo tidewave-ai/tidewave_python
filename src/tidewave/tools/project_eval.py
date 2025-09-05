@@ -8,21 +8,29 @@ from typing import Any, Optional
 def project_eval(
     code: str,
     arguments: Optional[list[Any]] = None,
-    timeout: int = 30,
-    as_json: bool = False,
+    timeout: int = 30_000,
+    *,
+    json: bool = False,
 ) -> str:
     """
-    Execute Python code with optional arguments and timeout.
+    Evaluates Python code in the context of the project.
 
-    Args:
-            code (str): The Python code to execute.
-            arguments (Optional[list[Any]]): The arguments to pass to the code.
-            timeout (int): The maximum time to wait for execution, in seconds.
-            json (bool): Whether to return the result as JSON.
+    Use this tool every time you need to evaluate Python code,
+    including to test the behaviour of a function or to debug
+    something. The tool also returns anything written to standard
+    output. DO NOT use shell tools to evaluate Python code.
 
-    Returns:
-            Result of execution (str or JSON)
+    Arguments:
+
+      * `code`: The Python code to evaluate.
+      * `arguments`: A list of arguments to pass to evaluation.
+        They are available inside the evaluated code as `arguments`.
+      * `timeout`: The maximum time to wait for execution, in milliseconds.
+        Defaults to `30_000`.
+
     """
+
+    timeout = timeout / 1000  # Convert milliseconds to seconds.
 
     queue = multiprocessing.Queue()
     process = multiprocessing.Process(
@@ -47,7 +55,7 @@ def project_eval(
         stderr = output.get("stderr", "")
         error_message = output.get("error", None)
 
-    if as_json:
+    if json:
         response = json_module.dumps(
             {
                 "result": str(result) if result is not None else "",
@@ -78,7 +86,7 @@ def execute_code(code, arguments, queue):
     error_message = None
 
     execution_globals = {
-        "__builtins__": __builtins__,  # ⚠️ Potential security risk.
+        "__builtins__": __builtins__,
         "arguments": arguments or [],
     }
 
@@ -98,6 +106,7 @@ def execute_code(code, arguments, queue):
         error_message = str(e)
         result = error_message
         success = False
+
     queue.put(
         {
             "result": result,
