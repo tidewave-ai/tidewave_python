@@ -1,5 +1,8 @@
 import json
+import sys
 import unittest
+
+import pytest
 
 from tidewave.tools.project_eval import project_eval
 
@@ -39,6 +42,23 @@ class TestPythonEvalTool(unittest.TestCase):
         self.assertFalse(output["success"])
         self.assertIn("fail", output["error"])
 
+    @pytest.mark.skipif(
+        sys.version_info >= (3, 11),
+        reason="Test only for Python < 3.11",
+    )
+    def test_python_execution_legacy_syntax_error(self):
+        """Test execution with syntax error"""
+        code = "def bad:"
+        result = project_eval(code, as_json=True)
+        output = self._collect_output(result)
+        self.assertIn("invalid syntax", output["result"])
+        self.assertFalse(output["success"])
+        self.assertIn("invalid syntax", output["error"])
+
+    @pytest.mark.skipif(
+        sys.version_info < (3, 11),
+        reason="Improved error messages in 3.11+",
+    )
     def test_python_execution_syntax_error(self):
         """Test execution with syntax error"""
         code = "def bad:"
