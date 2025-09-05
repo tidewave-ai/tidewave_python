@@ -243,7 +243,3 @@ class TestMCPIntegration(unittest.TestCase):
 
         response_data = json.loads(b"".join(result).decode("utf-8"))
         self.assertEqual(response_data["status"], "ok")
-
-
-if __name__ == "__main__":
-    unittest.main()

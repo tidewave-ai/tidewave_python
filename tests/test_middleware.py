@@ -686,7 +686,3 @@ class TestExecuteCommand(TestMiddlewareBase):
         output_type, output_data = chunks[0]
         self.assertEqual(output_type, 0)
         self.assertEqual(output_data, b"windows output")
-
-
-if __name__ == "__main__":
-    unittest.main()

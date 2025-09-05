@@ -127,7 +127,3 @@ class TestDjangoMiddleware(unittest.TestCase):
         self.assertEqual(environ["CONTENT_TYPE"], "application/json")
         self.assertIn("wsgi.input", environ)
         self.assertIn("REMOTE_ADDR", environ)
-
-
-if __name__ == "__main__":
-    unittest.main()
