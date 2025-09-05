@@ -304,7 +304,3 @@ class TestMCPTool(unittest.TestCase):
             str(context.exception),
         )
         self.assertIn("Hidden parameters cannot be required", str(context.exception))
-
-
-if __name__ == "__main__":
-    unittest.main()

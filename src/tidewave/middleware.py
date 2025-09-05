@@ -135,7 +135,9 @@ class Middleware:
         )
         return [template.encode("utf-8")]
 
-    def _handle_shell_command(self, environ: dict, start_response) -> Iterator[bytes]:
+    def _handle_shell_command(
+        self, environ: dict[str, Any], start_response: Callable
+    ) -> Iterator[bytes]:
         """
         Handle shell command execution for MCP server
 
@@ -154,8 +156,9 @@ class Middleware:
             content_length = 0
 
         if content_length == 0:
-            start_response("400 Bad Request", [("Content-Type", "text/plain")])
-            return [b"Command body is required"]
+            return self._send_error_response(
+                start_response, HTTPStatus.BAD_REQUEST, "Command body is required"
+            )
 
         # Read and parse body
         try:
@@ -164,15 +167,18 @@ class Middleware:
             cmd = parsed_body.get("command")
 
             if not cmd:
-                start_response("400 Bad Request", [("Content-Type", "text/plain")])
-                return [b"Command field is required"]
+                return self._send_error_response(
+                    start_response, HTTPStatus.BAD_REQUEST, "Command field is required"
+                )
 
         except json.JSONDecodeError:
-            start_response("400 Bad Request", [("Content-Type", "text/plain")])
-            return [b"Invalid JSON in request body"]
+            return self._send_error_response(
+                start_response, HTTPStatus.BAD_REQUEST, "Invalid JSON in request body"
+            )
         except Exception:
-            start_response("400 Bad Request", [("Content-Type", "text/plain")])
-            return [b"Error reading request body"]
+            return self._send_error_response(
+                start_response, HTTPStatus.BAD_REQUEST, "Error reading request body"
+            )
 
         # Start streaming response
         start_response("200 OK", [("Content-Type", "application/octet-stream")])

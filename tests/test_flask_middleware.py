@@ -26,7 +26,3 @@ class TestFlaskMiddleware(unittest.TestCase):
         # Check that specific tools are available
         self.assertIn("add", mcp_handler.tools)
         self.assertIn("multiply", mcp_handler.tools)
-
-
-if __name__ == "__main__":
-    unittest.main()

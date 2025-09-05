@@ -42,8 +42,13 @@ class Middleware(MiddlewareMixin):
         self.get_response = get_response
 
         # Create MCP handler with tools
-        tool_functions = [tools.add, tools.multiply]
-        self.mcp_handler = MCPHandler(tool_functions)
+        self.mcp_handler = MCPHandler(
+            [
+                tools.add,
+                tools.multiply,
+                tools.project_eval,
+            ]
+        )
 
         # Create dummy WSGI app for base middleware
         def dummy_wsgi_app(environ, start_response):

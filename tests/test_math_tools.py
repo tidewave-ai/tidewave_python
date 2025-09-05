@@ -104,7 +104,3 @@ class TestMultiplyTool(unittest.TestCase):
         """Test multiply with invalid precision type"""
         result = self.tool.validate_and_call({"x": 3, "y": 4, "precision": "not_int"})
         self.assertIn("error", result)
-
-
-if __name__ == "__main__":
-    unittest.main()
