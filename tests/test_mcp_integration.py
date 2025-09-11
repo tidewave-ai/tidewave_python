@@ -9,14 +9,27 @@ from unittest.mock import Mock
 
 from tidewave.mcp_handler import MCPHandler
 from tidewave.middleware import Middleware
-from tidewave.tools import add, multiply
+from tidewave.tools import project_eval
 
+def add(a: float, b: float) -> str:
+    """
+    Add two numbers together.
+
+    Args:
+        a: The first number to add
+        b: The second number to add
+
+    Returns:
+        A string describing the sum of the two numbers
+    """
+    result = a + b
+    return f"The sum of {a} and {b} is {result}"
 
 class TestMCPIntegration(unittest.TestCase):
     """Integration tests with real tools"""
 
     def setUp(self):
-        tool_functions = [add, multiply]
+        tool_functions = [add, project_eval]
         mcp_handler = MCPHandler(tool_functions)
         self.middleware = Middleware(Mock(), mcp_handler, {})
         self.start_response = Mock()
@@ -64,7 +77,7 @@ class TestMCPIntegration(unittest.TestCase):
         self.assertEqual(len(tools), 2)
         tool_names = [tool["name"] for tool in tools]
         self.assertIn("add", tool_names)
-        self.assertIn("multiply", tool_names)
+        self.assertIn("project_eval", tool_names)
 
     def test_tool_call_success(self):
         """Test successful tool call"""

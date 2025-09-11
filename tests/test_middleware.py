@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 
 from tidewave.mcp_handler import MCPHandler
 from tidewave.middleware import Middleware
-from tidewave.tools import add, multiply
+from tidewave.tools import project_eval
 
 
 class TestMiddlewareBase(unittest.TestCase):
@@ -27,7 +27,7 @@ class TestMiddlewareBase(unittest.TestCase):
             "allowed_origins": ["localhost"],
         }
 
-        self.mcp_handler = MCPHandler([add, multiply])
+        self.mcp_handler = MCPHandler([project_eval])
         self.middleware = self._create_middleware(self.config)
         self.start_response = Mock()
 
