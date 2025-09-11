@@ -66,27 +66,6 @@ class TestMiddleware(TestMiddlewareBase):
         self.demo_app.assert_called_once_with(environ, self.start_response)
         self.assertEqual(result, [b"demo response"])
 
-    def test_empty_route_returns_empty_html(self):
-        """Test that /tidewave/empty route returns empty HTML response"""
-        environ = self._create_environ("/tidewave/empty", "GET")
-
-        result = self.middleware(environ, self.start_response)
-
-        # Should return 200 OK with empty content
-        self.start_response.assert_called_once()
-        call_args = self.start_response.call_args[0]
-        self.assertIn("200", call_args[0])
-
-        # Check headers
-        headers = call_args[1]
-        content_type = next(
-            (value for name, value in headers if name == "Content-Type"), None
-        )
-        self.assertEqual(content_type, "text/html")
-
-        # Check empty body
-        self.assertEqual(result, [b""])
-
     def test_home_route_returns_html(self):
         """Test that /tidewave/ returns a valid HTML response"""
         result = self.middleware._handle_home_route(self.start_response)
@@ -200,12 +179,11 @@ class TestMiddleware(TestMiddlewareBase):
         config = {"use_script_name": True}
         middleware = self._create_middleware(config)
 
-        environ = self._create_environ("/empty", "GET")
+        environ = self._create_environ("", "GET")
         environ["SCRIPT_NAME"] = "/tidewave"
 
         middleware(environ, self.start_response)
 
-        # Should return 200 OK with empty content
         self.start_response.assert_called_once()
         call_args = self.start_response.call_args[0]
         self.assertIn("200", call_args[0])

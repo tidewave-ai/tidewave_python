@@ -70,9 +70,6 @@ class Middleware:
                     start_response, HTTPStatus.FORBIDDEN, security_error
                 )
 
-        if full_path == "/tidewave/empty":
-            return self._handle_empty_route(start_response)
-
         if full_path == "/tidewave":
             return self._handle_home_route(start_response)
 
@@ -93,17 +90,6 @@ class Middleware:
                 )
 
         return self.app(environ, start_response)
-
-    def _handle_empty_route(self, start_response: Callable):
-        """Handle /empty route (returns empty HTML response)"""
-        response_headers = [
-            ("Content-Type", "text/html"),
-            ("Content-Length", "0"),
-        ]
-        start_response(
-            f"{HTTPStatus.OK.value} {HTTPStatus.OK.phrase}", response_headers
-        )
-        return [b""]
 
     def _handle_home_route(self, start_response: Callable) -> Iterator[bytes]:
         client_config = {
