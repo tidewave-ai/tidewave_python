@@ -41,8 +41,7 @@ class TestDjangoMiddleware(unittest.TestCase):
         self.assertIsNotNone(middleware.base_middleware)
 
         # Check that specific tools are available
-        self.assertIn("add", middleware.mcp_handler.tools)
-        self.assertIn("multiply", middleware.mcp_handler.tools)
+        self.assertIn("project_eval", middleware.mcp_handler.tools)
 
     def test_config_with_internal_ips(self):
         """Test that middleware uses Django's INTERNAL_IPS setting"""

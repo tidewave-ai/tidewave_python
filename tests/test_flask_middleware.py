@@ -24,5 +24,4 @@ class TestFlaskMiddleware(unittest.TestCase):
         self.assertIsNotNone(mcp_handler)
 
         # Check that specific tools are available
-        self.assertIn("add", mcp_handler.tools)
-        self.assertIn("multiply", mcp_handler.tools)
+        self.assertIn("project_eval", mcp_handler.tools)

@@ -44,8 +44,6 @@ class Middleware(MiddlewareMixin):
         # Create MCP handler with tools
         self.mcp_handler = MCPHandler(
             [
-                tools.add,
-                tools.multiply,
                 tools.project_eval,
             ]
         )
