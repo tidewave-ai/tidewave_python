@@ -11,6 +11,7 @@ from tidewave.mcp_handler import MCPHandler
 from tidewave.middleware import Middleware
 from tidewave.tools import project_eval
 
+
 def add(a: float, b: float) -> str:
     """
     Add two numbers together.
@@ -24,6 +25,7 @@ def add(a: float, b: float) -> str:
     """
     result = a + b
     return f"The sum of {a} and {b} is {result}"
+
 
 class TestMCPIntegration(unittest.TestCase):
     """Integration tests with real tools"""
