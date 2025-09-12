@@ -35,7 +35,8 @@ class TestMCPTool(unittest.TestCase):
         self.assertIn("y", schema["properties"])
         self.assertEqual(schema["required"], ["x"])
 
-        # Test that x is integer type
+        # Test explicit schema structure
+        self.assertEqual(len(schema["properties"]), 2)
         self.assertEqual(schema["properties"]["x"]["type"], "integer")
         # Test that y has default value
         self.assertEqual(schema["properties"]["y"]["default"], "default")
@@ -304,3 +305,34 @@ class TestMCPTool(unittest.TestCase):
             str(context.exception),
         )
         self.assertIn("Hidden parameters cannot be required", str(context.exception))
+
+    def test_numeric_types_and_mixed_validation(self):
+        """Test numeric types (float/int) and mixed validation"""
+
+        def calculate(a: float, b: int) -> str:
+            """Calculate with mixed numeric types"""
+            return f"Result: {a + b}"
+
+        tool = MCPTool(calculate)
+
+        # Test schema generation for numeric types
+        schema = tool.input_schema
+        self.assertEqual(len(schema["properties"]), 2)
+        self.assertEqual(schema["properties"]["a"]["type"], "number")
+        self.assertEqual(schema["properties"]["b"]["type"], "integer")
+        self.assertEqual(schema["required"], ["a", "b"])
+
+        # Test mixed numeric validation - float + int
+        result1 = tool.validate_and_call({"a": 3.5, "b": 2})
+        self.assertIn("content", result1)
+        self.assertIn("Result: 5.5", result1["content"][0]["text"])
+
+        # Test int provided for float parameter
+        result2 = tool.validate_and_call({"a": 10, "b": 5})
+        self.assertIn("content", result2)
+        self.assertIn("Result: 15", result2["content"][0]["text"])
+
+        # Test float provided for int parameter (should fail validation)
+        result3 = tool.validate_and_call({"a": 2.0, "b": 3.7})
+        self.assertIn("error", result3)
+        self.assertIn("Invalid arguments", result3["error"])

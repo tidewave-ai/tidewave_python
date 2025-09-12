@@ -4,9 +4,9 @@ Flask-specific middleware for Tidewave MCP integration
 
 from typing import Any, Callable
 
-from ..mcp_handler import MCPHandler
-from ..middleware import Middleware as BaseMiddleware
-from ..tools import add, multiply
+from tidewave import tools
+from tidewave.mcp_handler import MCPHandler
+from tidewave.middleware import Middleware as BaseMiddleware
 
 
 class Middleware:
@@ -23,11 +23,9 @@ class Middleware:
         """
         self.config = config or {}
 
-        # Create MCP handler with tools
-        tool_functions = [add, multiply]
+        tool_functions = [tools.project_eval]
         self.mcp_handler = MCPHandler(tool_functions)
 
-        # Create the base middleware with the MCP handler
         self.middleware = BaseMiddleware(app, self.mcp_handler, self.config)
 
     def __call__(self, environ: dict[str, Any], start_response: Callable):
