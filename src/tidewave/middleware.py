@@ -106,7 +106,7 @@ class Middleware:
                 <meta charset="UTF-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
                 <meta name="tidewave:config" content="{config_json}" />
-                <script type="module" src="{self.config.get("client_url")}"></script>
+                <script type="module" src="{self.config.get("client_url")}/tc/tc.js"></script>
                 </head>
                 <body></body>
             </html>

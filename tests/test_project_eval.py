@@ -20,7 +20,7 @@ class TestPythonEvalTool(unittest.TestCase):
         """Test code execution (expression)"""
         result = project_eval("1 + 2", json=True)
         output = self._collect_output(result)
-        self.assertEqual(output["result"], "3")
+        self.assertEqual(output["result"], 3)
         self.assertTrue(output["success"])
         self.assertIsNone(output["error"])
 
@@ -29,7 +29,7 @@ class TestPythonEvalTool(unittest.TestCase):
         code = "result = 5 * 7"
         result = project_eval(code, json=True)
         output = self._collect_output(result)
-        self.assertEqual(output["result"], "35")
+        self.assertEqual(output["result"], 35)
         self.assertTrue(output["success"])
         self.assertIsNone(output["error"])
 
@@ -89,7 +89,7 @@ class TestPythonEvalTool(unittest.TestCase):
         code = "a = 10\nb = 20\nresult = a + b"
         result = project_eval(code, json=True)
         output = self._collect_output(result)
-        self.assertEqual(output["result"], "30")
+        self.assertEqual(output["result"], 30)
         self.assertTrue(output["success"])
         self.assertIsNone(output["error"])
 
@@ -108,6 +108,6 @@ class TestPythonEvalTool(unittest.TestCase):
         code = "result = arguments[0] + arguments[1]"
         result = project_eval(code, arguments=[10, 32], json=True)
         output = self._collect_output(result)
-        self.assertEqual(output["result"], "42")
+        self.assertEqual(output["result"], 42)
         self.assertTrue(output["success"])
         self.assertIsNone(output["error"])

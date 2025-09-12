@@ -58,7 +58,7 @@ def project_eval(
     if json:
         response = json_module.dumps(
             {
-                "result": str(result) if result is not None else "",
+                "result": result,
                 "success": success,
                 "stdout": stdout,
                 "stderr": stderr,

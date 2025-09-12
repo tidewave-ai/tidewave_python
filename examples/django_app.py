@@ -31,9 +31,6 @@ def create_app():
                 "NAME": ":memory:",
             }
         },
-        TIDEWAVE={
-            "client_url": "https://tidewave.ai/tc/tc.js",
-        },
     )
     django.setup()
     return get_wsgi_application()
