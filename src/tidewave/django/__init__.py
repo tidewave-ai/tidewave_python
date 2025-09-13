@@ -18,22 +18,17 @@ class Middleware(MiddlewareMixin):
     """Django middleware for Tidewave MCP integration
 
     This middleware integrates Tidewave MCP functionality into Django applications.
-    It automatically configures security settings based on Django's INTERNAL_IPS,
-    ALLOWED_HOSTS, and DEBUG settings.
+    It automatically configures security settings based on Django's ALLOWED_HOSTS and
+    DEBUG settings.
 
     Usage:
-        Add to Django's MIDDLEWARE setting:
-        MIDDLEWARE = [
-            ...
-            'tidewave.django.Middleware',
-            ...
-        ]
+        # After MIDDLEWARE= definition
+        if DEBUG:
+          MIDDLEWARE.insert(0, 'tidewave.django.Middleware')
 
     Configuration:
-        The middleware automatically uses Django settings:
-        - INTERNAL_IPS: Used for IP-based access control
-        - ALLOWED_HOSTS: Used as allowed origins (when not empty or when DEBUG=False)
-        - DEBUG: When True and ALLOWED_HOSTS is empty, allows local development
+        - ALLOWED_HOSTS: Used as allowed origins
+        - TIDEWAVE['allow_remote_access']: Whether to allow remote connections (default False)
     """
 
     def __init__(self, get_response: Callable):
@@ -59,10 +54,6 @@ class Middleware(MiddlewareMixin):
 
     def _build_config(self) -> dict[str, Any]:
         """Build configuration based on Django settings"""
-        # Use Django's INTERNAL_IPS for IP-based access control
-        internal_ips = getattr(settings, "INTERNAL_IPS", [])
-
-        # Determine allowed origins from ALLOWED_HOSTS
         allowed_hosts = getattr(settings, "ALLOWED_HOSTS", [])
         debug = getattr(settings, "DEBUG", False)
 
@@ -70,12 +61,10 @@ class Middleware(MiddlewareMixin):
         if not allowed_hosts and debug:
             allowed_hosts = [".localhost", "127.0.0.1", "::1"]
 
-        # Grab Tidewave client URL
-        client_url = getattr(settings, "TIDEWAVE", {}).get(
-            "client_url", "https://tidewave.ai"
-        )
+        tidewave_settings = getattr(settings, "TIDEWAVE", {})
+        allow_remote_access = tidewave_settings.get("allow_remote_access", False)
+        client_url = tidewave_settings.get("client_url", "https://tidewave.ai")
 
-        # Determine Django project name
         project_name = "django_app"
         try:
             project_name = settings.SETTINGS_MODULE.split(".")[0]
@@ -86,7 +75,7 @@ class Middleware(MiddlewareMixin):
             "framework_type": "django",
             "project_name": project_name,
             "client_url": client_url,
-            "internal_ips": internal_ips,
+            "allow_remote_access": allow_remote_access,
             "allowed_origins": allowed_hosts,
         }
 

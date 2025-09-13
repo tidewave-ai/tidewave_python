@@ -19,7 +19,7 @@ def mount(app: FastAPI, config: dict[str, Any] = None):
     Args:
         app: FastAPI application instance
         config: Configuration dict with options:
-            - internal_ips: list of allowed IP addresses (default ["127.0.0.1"])
+            - allow_remote_access: bool (default False) - whether to allow remote connections
             - allowed_origins: list of allowed origin hosts (default [])
     """
 

@@ -14,9 +14,11 @@ if not settings.configured:
     settings.configure(
         DEBUG=True,
         SECRET_KEY="test-secret-key",
-        INTERNAL_IPS=["127.0.0.1", "::1"],
         ALLOWED_HOSTS=[],
         USE_TZ=True,
+        TIDEWAVE={
+            "allow_remote_access": False,
+        },
     )
     django.setup()
 
@@ -43,13 +45,27 @@ class TestDjangoMiddleware(unittest.TestCase):
         # Check that specific tools are available
         self.assertIn("project_eval", middleware.mcp_handler.tools)
 
-    def test_config_with_internal_ips(self):
-        """Test that middleware uses Django's INTERNAL_IPS setting"""
-        with override_settings(INTERNAL_IPS=["192.168.1.1", "10.0.0.1"]):
+    def test_config_with_allow_remote_access(self):
+        """Test that middleware uses Django's TIDEWAVE allow_remote_access setting"""
+        with override_settings(TIDEWAVE={"allow_remote_access": True}):
             middleware = Middleware(self.get_response)
             config = middleware._build_config()
 
-            self.assertEqual(config["internal_ips"], ["192.168.1.1", "10.0.0.1"])
+            self.assertEqual(config["allow_remote_access"], True)
+
+        with override_settings(TIDEWAVE={"allow_remote_access": False}):
+            middleware = Middleware(self.get_response)
+            config = middleware._build_config()
+
+            self.assertEqual(config["allow_remote_access"], False)
+
+    def test_config_without_tidewave_settings(self):
+        """Test that middleware defaults to allow_remote_access=False when no TIDEWAVE settings"""
+        with override_settings(TIDEWAVE={}):
+            middleware = Middleware(self.get_response)
+            config = middleware._build_config()
+
+            self.assertEqual(config["allow_remote_access"], False)
 
     def test_config_with_allowed_hosts_debug_false(self):
         """Test that middleware uses ALLOWED_HOSTS when DEBUG is False"""
