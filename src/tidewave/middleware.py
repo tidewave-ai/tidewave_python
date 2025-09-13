@@ -5,6 +5,7 @@ WSGI Middleware for basic routing and security
 import html
 import json
 import logging
+import re
 import select
 import struct
 import subprocess
@@ -33,8 +34,8 @@ class Middleware:
             app: WSGI application to wrap
             mcp_handler: MCPHandler instance to handle MCP requests
             config: Configuration dict with options:
-                - internal_ips: list of allowed IP addresses (default ["127.0.0.1"])
-                  * Empty list means no access allowed
+                - allow_remote_access: bool (default False) - whether to allow
+                  remote connections. If False, only local IPs are allowed.
                 - allowed_origins: list of allowed origin hosts (default []) following
                   Django's ALLOWED_HOSTS pattern:
                   * Exact matches (case-insensitive): 'example.com', 'www.example.com'
@@ -63,9 +64,9 @@ class Middleware:
 
         # Check if this is a tidewave route
         if full_path.startswith("/tidewave"):
-            # Security checks for all tidewave routes
             security_error = self._check_security(environ)
             if security_error:
+                self.logger.warning(security_error)
                 return self._send_error_response(
                     start_response, HTTPStatus.FORBIDDEN, security_error
                 )
@@ -177,12 +178,12 @@ class Middleware:
 
         # Check remote IP
         remote_addr = environ.get("REMOTE_ADDR", "")
-        if not self._is_ip_allowed(remote_addr):
+        if not self._validate_ip(remote_addr):
             self.logger.warning(f"Access denied for IP: {remote_addr}")
             return (
-                f"For security reasons, Tidewave only accepts requests from allowed "
-                f"IPs.\n\nAdd '{remote_addr}' to the `internal_ips` configuration "
-                f"option to allow access."
+                "For security reasons, Tidewave does not accept remote connections by default.\n\n"
+                "If you really want to allow remote connections, "
+                "configure Tidewave with the `allow_remote_access: true` option"
             )
 
         # Check origin header (if present)
@@ -190,19 +191,17 @@ class Middleware:
         if origin:
             hostname = urlparse(origin).hostname
             if hostname is None:
-                self.logger.warning(f"Malformed origin header: {origin}")
                 return (
-                    f"For security reasons, Tidewave only accepts requests from allowed"
-                    f" hosts.\n\nThe origin header appears to be malformed: {origin}"
+                    "For security reasons, Tidewave only accepts requests from allowed hosts.\n\n"
+                    f"The origin header appears to be malformed: {origin}"
                 )
 
             host = hostname.lower()
             if not self._validate_allowed_origin(host):
-                self.logger.warning(f"Origin validation failed for host: {host}")
                 return (
-                    f"For security reasons, Tidewave only accepts requests from allowed"
-                    f" hosts.\n\nIf you want to allow requests from '{host}', configure"
-                    f" Tidewave with the `allowed_origins: ['{host}']` option."
+                    "For security reasons, Tidewave only accepts requests from allowed hosts.\n\n"
+                    f"If you want to allow requests from '{host}', "
+                    "you must configure your framework/Tidewave accordingly"
                 )
 
         return None
@@ -236,10 +235,23 @@ class Middleware:
 
         return False
 
-    def _is_ip_allowed(self, ip_str: str) -> bool:
-        """Check if IP address is in allowed internal IPs"""
-        internal_ips = self.config.get("internal_ips", ["127.0.0.1"])
-        return ip_str in internal_ips
+    def _validate_ip(self, ip_str: str) -> bool:
+        """Check if IP address is allowed based on allow_remote_access setting"""
+        allow_remote_access = self.config.get("allow_remote_access", False)
+
+        if allow_remote_access:
+            return True
+
+        if re.match(r"^127\.0\.0\.\d{1,3}$", ip_str):
+            return True
+
+        if ip_str == "::1":
+            return True
+
+        if ip_str == "::ffff:127.0.0.1":
+            return True
+
+        return False
 
     def _send_error_response(
         self,

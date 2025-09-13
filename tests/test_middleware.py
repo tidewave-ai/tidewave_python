@@ -23,7 +23,7 @@ class TestMiddlewareBase(unittest.TestCase):
 
         self.config = {
             "debug": True,
-            "internal_ips": ["127.0.0.1"],  # Allow for testing
+            "allow_remote_access": True,  # Allow for testing
             "allowed_origins": ["localhost"],
         }
 
@@ -95,21 +95,23 @@ class TestMiddleware(TestMiddlewareBase):
 
     def test_security_remote_ip_blocked(self):
         """Test that remote IPs are blocked by default"""
-        config = {"internal_ips": ["127.0.0.1"]}
+        config = {"allow_remote_access": False}
         middleware = self._create_middleware(config)
-        environ = self._create_environ(
-            "/tidewave/mcp", "POST", remote_addr="192.168.1.100"
-        )
 
-        middleware(environ, self.start_response)
+        ips = ["192.168.1.100", "1.1.1.1", "invalid", "2001:4860:4860::8888"]
 
-        # Should return 403 Forbidden
-        call_args = self.start_response.call_args[0]
-        self.assertIn("403", call_args[0])
+        for ip in ips:
+            environ = self._create_environ("/tidewave/mcp", "POST", remote_addr=ip)
 
-    def test_security_internal_ip_allowed(self):
-        """Test that internal IPs are allowed"""
-        config = {"internal_ips": ["127.0.0.1", "192.168.1.100"]}
+            middleware(environ, self.start_response)
+
+            # Should return 403 Forbidden
+            call_args = self.start_response.call_args[0]
+            self.assertIn("403", call_args[0])
+
+    def test_security_remote_ip_allowed_when_enabled(self):
+        """Test that remote IPs are allowed when allow_remote_access is True"""
+        config = {"allow_remote_access": True}
         middleware = self._create_middleware(config)
         environ = self._create_environ(
             "/tidewave/mcp",
@@ -123,6 +125,28 @@ class TestMiddleware(TestMiddlewareBase):
         # Should return 200 OK (ping response)
         call_args = self.start_response.call_args[0]
         self.assertIn("200", call_args[0])
+
+    def test_local_ip_detection(self):
+        """Test that IPv4 localhost addresses are detected as local"""
+        config = {"allow_remote_access": False}
+        middleware = self._create_middleware(config)
+
+        ips = ["127.0.0.1", "127.0.0.2", "127.0.0.255", "::1", "::ffff:127.0.0.1"]
+
+        for ip in ips:
+            environ = self._create_environ(
+                "/tidewave/mcp",
+                "POST",
+                body='{"jsonrpc": "2.0", "method": "ping", "id": 1}',
+                remote_addr=ip,
+            )
+
+            middleware(environ, self.start_response)
+
+            # Should return 200 OK (ping response)
+            call_args = self.start_response.call_args[0]
+            self.assertIn("200", call_args[0], f"IP {ip} should be allowed as local")
+            self.start_response.reset_mock()
 
     def test_invalid_json_request(self):
         """Test handling of invalid JSON"""

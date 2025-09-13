@@ -18,7 +18,7 @@ class Middleware:
         Args:
             app: Flask WSGI application to wrap
             config: Configuration dict with options:
-                - internal_ips: list of allowed IP addresses (default ["127.0.0.1"])
+                - allow_remote_access: bool (default False) - whether to allow remote connections
                 - allowed_origins: list of allowed origin hosts (default [])
         """
         self.config = config or {}
