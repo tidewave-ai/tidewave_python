@@ -72,7 +72,7 @@ class Middleware(MiddlewareMixin):
 
         # Grab Tidewave client URL
         client_url = getattr(settings, "TIDEWAVE", {}).get(
-            "client_url", "https://tidewave.ai/tc/tc.js"
+            "client_url", "https://tidewave.ai"
         )
 
         # Determine Django project name
@@ -129,6 +129,12 @@ class Middleware(MiddlewareMixin):
         for key, value in headers.items():
             if key.lower() != "content-type":
                 response[key] = value
+
+        return response
+
+    def process_response(self, request, response):
+        if "X-Frame-Options" in response:
+            del response["X-Frame-Options"]
 
         return response
 

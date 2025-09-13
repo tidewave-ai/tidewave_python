@@ -79,12 +79,12 @@ class TestDjangoMiddleware(unittest.TestCase):
     def test_config_with_client_url(self):
         """Test that middleware uses CLIENT_URL setting"""
         with override_settings(
-            TIDEWAVE={"client_url": "https://tidewave.ai/client.js"}
+            TIDEWAVE={"client_url": "http://localhost:9000"}
         ):
             middleware = Middleware(self.get_response)
             config = middleware._build_config()
 
-            self.assertEqual(config["client_url"], "https://tidewave.ai/client.js")
+            self.assertEqual(config["client_url"], "http://localhost:9000")
 
     def test_config_with_project_name(self):
         """Test that middleware uses detects project name"""

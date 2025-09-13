@@ -30,6 +30,11 @@ def project_eval(
 
     """
 
+    # Note that we run the code in a separate OS process. This allows
+    # us to terminate it once a timeout is reached. If we were to run
+    # the code in another thread instead, we would have no clean way
+    # of stopping it (other than signals, but those only work on Unix).
+
     timeout = timeout / 1000  # Convert milliseconds to seconds.
 
     queue = multiprocessing.Queue()
@@ -58,7 +63,7 @@ def project_eval(
     if json:
         response = json_module.dumps(
             {
-                "result": str(result) if result is not None else "",
+                "result": result,
                 "success": success,
                 "stdout": stdout,
                 "stderr": stderr,
