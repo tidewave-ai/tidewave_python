@@ -101,15 +101,13 @@ class TestMiddleware(TestMiddlewareBase):
         ips = ["192.168.1.100", "1.1.1.1", "invalid", "2001:4860:4860::8888"]
 
         for ip in ips:
-          environ = self._create_environ(
-              "/tidewave/mcp", "POST", remote_addr=ip
-          )
+            environ = self._create_environ("/tidewave/mcp", "POST", remote_addr=ip)
 
-          middleware(environ, self.start_response)
+            middleware(environ, self.start_response)
 
-          # Should return 403 Forbidden
-          call_args = self.start_response.call_args[0]
-          self.assertIn("403", call_args[0])
+            # Should return 403 Forbidden
+            call_args = self.start_response.call_args[0]
+            self.assertIn("403", call_args[0])
 
     def test_security_remote_ip_allowed_when_enabled(self):
         """Test that remote IPs are allowed when allow_remote_access is True"""

@@ -182,7 +182,8 @@ class Middleware:
             self.logger.warning(f"Access denied for IP: {remote_addr}")
             return (
                 "For security reasons, Tidewave does not accept remote connections by default.\n\n"
-                "If you really want to allow remote connections, configure the Tidewave with the `allow_remote_access: true` option."
+                "If you really want to allow remote connections, "
+                "configure Tidewave with the `allow_remote_access: true` option"
             )
 
         # Check origin header (if present)
@@ -191,15 +192,16 @@ class Middleware:
             hostname = urlparse(origin).hostname
             if hostname is None:
                 return (
-                    f"For security reasons, Tidewave only accepts requests from allowed hosts.\n\n"
+                    "For security reasons, Tidewave only accepts requests from allowed hosts.\n\n"
                     f"The origin header appears to be malformed: {origin}"
                 )
 
             host = hostname.lower()
             if not self._validate_allowed_origin(host):
                 return (
-                    f"For security reasons, Tidewave only accepts requests from allowed hosts.\n\n"
-                    f"If you want to allow requests from '{host}', you must configure your framework/Tidewave accordingly"
+                    "For security reasons, Tidewave only accepts requests from allowed hosts.\n\n"
+                    f"If you want to allow requests from '{host}', "
+                    "you must configure your framework/Tidewave accordingly"
                 )
 
         return None
@@ -240,7 +242,7 @@ class Middleware:
         if allow_remote_access:
             return True
 
-        if re.match(r'^127\.0\.0\.\d{1,3}$', ip_str):
+        if re.match(r"^127\.0\.0\.\d{1,3}$", ip_str):
             return True
 
         if ip_str == "::1":

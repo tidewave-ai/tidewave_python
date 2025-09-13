@@ -94,9 +94,7 @@ class TestDjangoMiddleware(unittest.TestCase):
 
     def test_config_with_client_url(self):
         """Test that middleware uses CLIENT_URL setting"""
-        with override_settings(
-            TIDEWAVE={"client_url": "http://localhost:9000"}
-        ):
+        with override_settings(TIDEWAVE={"client_url": "http://localhost:9000"}):
             middleware = Middleware(self.get_response)
             config = middleware._build_config()
 
