@@ -33,25 +33,28 @@ def get_source_location(reference: str) -> str:
         raise ValueError("Reference must be a non-empty string")
 
     reference = reference.strip()
+    obj = _normalized_resolve_reference(reference)
+
+    if obj is None:
+        raise NameError(f"could not find source location for {reference}")
 
     try:
-        obj = _resolve_reference(reference)
-        if obj is None:
+        file_path, line_number = (
+            inspect.getsourcefile(obj),
+            inspect.getsourcelines(obj)[1],
+        )
+        if file_path:
+            return f"{file_path}:{line_number}"
+        else:
             raise NameError(f"could not find source location for {reference}")
+    except (OSError, TypeError) as e:
+        # Some built-ins don't have source (like C extensions)
+        raise NameError(f"could not find source location for {reference}") from e
 
-        try:
-            file_path, line_number = (
-                inspect.getsourcefile(obj),
-                inspect.getsourcelines(obj)[1],
-            )
-            if file_path:
-                return f"{file_path}:{line_number}"
-            else:
-                raise NameError(f"could not find source location for {reference}")
-        except (OSError, TypeError) as e:
-            # Some built-ins don't have source (like C extensions)
-            raise NameError(f"could not find source location for {reference}") from e
 
+def _normalized_resolve_reference(reference: str) -> Optional[Any]:
+    try:
+        return _resolve_reference(reference)
     except (ImportError, AttributeError) as e:
         raise NameError(f"could not resolve reference {reference}") from e
     except (TypeError, OSError) as e:
