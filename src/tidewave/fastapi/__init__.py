@@ -2,7 +2,7 @@
 FastAPI-specific integration for Tidewave MCP
 """
 
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import FastAPI
 
@@ -13,7 +13,7 @@ from tidewave.mcp_handler import MCPHandler
 from tidewave.middleware import Middleware
 
 
-def mount(app: FastAPI, config: dict[str, Any] = None):
+def mount(app: FastAPI, config: Optional[dict[str, Any]] = None):
     """Mount Tidewave middleware to a FastAPI application
 
     Args:
@@ -34,8 +34,12 @@ def mount(app: FastAPI, config: dict[str, Any] = None):
     app_config = config.copy()
     app_config["use_script_name"] = True
 
-    tool_functions = [tools.project_eval]
-    mcp_handler = MCPHandler(tool_functions)
+    mcp_handler = MCPHandler(
+        [
+            tools.get_source_location,
+            tools.project_eval,
+        ]
+    )
     middleware = Middleware(wsgi_app, mcp_handler, app_config)
 
     app.mount("/tidewave", WSGIMiddleware(middleware))
