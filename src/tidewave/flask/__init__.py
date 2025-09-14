@@ -2,7 +2,7 @@
 Flask-specific middleware for Tidewave MCP integration
 """
 
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 from tidewave import tools
 from tidewave.mcp_handler import MCPHandler
@@ -12,7 +12,7 @@ from tidewave.middleware import Middleware as BaseMiddleware
 class Middleware:
     """Flask-specific middleware that handles MCP handler initialization and routing"""
 
-    def __init__(self, app: Callable, config: dict[str, Any] = None):
+    def __init__(self, app: Callable, config: Optional[dict[str, Any]] = None):
         """Initialize Flask middleware with MCP handler
 
         Args:
@@ -23,8 +23,12 @@ class Middleware:
         """
         self.config = config or {}
 
-        tool_functions = [tools.project_eval]
-        self.mcp_handler = MCPHandler(tool_functions)
+        self.mcp_handler = MCPHandler(
+            [
+                tools.get_source_location,
+                tools.project_eval,
+            ]
+        )
 
         self.middleware = BaseMiddleware(app, self.mcp_handler, self.config)
 
