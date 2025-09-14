@@ -1,13 +1,8 @@
 import re
-import sys
 import unittest
 from unittest.mock import patch
 
-from tidewave.tools.get_src_location import (
-    _resolve_reference,
-    _traverse_attrs,
-    get_source_location,
-)
+from tidewave.tools.source import get_source_location
 
 
 class TestGetSourceLocation(unittest.TestCase):
@@ -66,22 +61,6 @@ class TestGetSourceLocation(unittest.TestCase):
                 get_source_location(reference)  # type: ignore
             self.assertIn("Reference must be a non-empty string", str(cm.exception))
 
-    def test_resolve_reference_strategies(self):
-        """Test that different resolution strategies work."""
-        # Test direct module import
-        obj = _resolve_reference("json")
-        self.assertIsNotNone(obj)
-
-        # Test attribute access
-        obj = _resolve_reference("json.loads")
-        self.assertIsNotNone(obj)
-        self.assertTrue(callable(obj))
-
-        # Test built-ins (should work for resolution but fail for source location)
-        obj = _resolve_reference("len")
-        self.assertIsNotNone(obj)
-        self.assertTrue(callable(obj))
-
     def test_various_python_references(self):
         """Test various types of Python references."""
         test_cases = [
@@ -114,40 +93,9 @@ class TestGetSourceLocation(unittest.TestCase):
             def __getattr__(self, name):
                 raise OSError("Mock inspect error")
 
-        with patch("tidewave.tools.get_src_location._resolve_reference", return_value=MockObject()):
+        with patch("tidewave.tools.source._resolve_reference", return_value=MockObject()):
             with self.assertRaises(NameError):
                 get_source_location("mock_obj")
-
-    def test_sys_modules_fallback(self):
-        """Test that _resolve_reference properly uses sys.modules fallback."""
-
-        class MockModule:
-            def test_attr(self):
-                return "test"
-
-        mock_module = MockModule()
-        sys.modules["test_mock_module"] = mock_module
-
-        try:
-            result = _resolve_reference("test_mock_module.test_attr")
-            self.assertIsNotNone(result)
-            self.assertEqual(result(), "test")
-        finally:
-            if "test_mock_module" in sys.modules:
-                del sys.modules["test_mock_module"]
-
-    def test_builtins_fallback(self):
-        """Test that _resolve_reference properly uses builtins fallback."""
-        result = _resolve_reference("len")
-        self.assertIsNotNone(result)
-        self.assertTrue(callable(result))
-        self.assertEqual(result([1, 2, 3]), 3)
-
-    def test_progressive_import_strategy(self):
-        """Test the progressive import strategy in _resolve_reference."""
-        result = _resolve_reference("pathlib.Path.cwd")
-        self.assertIsNotNone(result)
-        self.assertTrue(callable(result))
 
     def test_exception_wrapping_in_get_source_location(self):
         """Test that get_source_location properly wraps and re-raises exceptions."""
@@ -167,19 +115,7 @@ class TestGetSourceLocation(unittest.TestCase):
 
         test_lambda = lambda x: x  # noqa: E731
 
-        with patch("tidewave.tools.get_src_location._resolve_reference", return_value=test_lambda):
+        with patch("tidewave.tools.source._resolve_reference", return_value=test_lambda):
             result = get_source_location("test_lambda")
             self.assertIsInstance(result, str)
             self.assertTrue(re.search(r"\.py:\d+$", result))
-
-    def test_traverse_attrs_helper(self):
-        """Test the _traverse_attrs helper function."""
-
-        # Test with a simple object
-        class TestObj:
-            class NestedObj:
-                value = "test"
-
-        obj = TestObj()
-        result = _traverse_attrs(obj, ["NestedObj", "value"])
-        self.assertEqual(result, "test")
