@@ -3,6 +3,7 @@ import logging
 import os
 import re
 import tempfile
+from collections import deque
 from pathlib import Path
 from typing import Optional
 
@@ -33,29 +34,32 @@ def get_logs(tail: int, *, grep: Optional[str] = None) -> str:
     if not log_file.exists():
         return ""
 
-    try:
-        # Read all lines from the log file
-        with open(log_file, encoding="utf-8") as f:
-            lines = f.readlines()
+    if tail <= 0:
+        return "Tail parameter must be a positive integer"
 
-        # Apply grep filter if provided
+    try:
+        regex = None
         if grep:
             try:
                 regex = re.compile(grep, re.IGNORECASE)
-                lines = [line for line in lines if regex.search(line)]
             except re.error as e:
                 return f"Invalid regular expression '{grep}': {e}"
 
-        # Get the last 'tail' lines
-        if tail <= 0:
-            return "Tail parameter must be a positive integer"
+        # Use deque to keep only last `tail` lines.
+        tail_lines = deque(maxlen=tail)
 
-        selected_lines = lines[-tail:] if len(lines) > tail else lines
+        with open(log_file, encoding="utf-8") as f:
+            if regex:
+                for line in filter(regex.search, f):
+                    tail_lines.append(line)
+            else:
+                for line in f:
+                    tail_lines.append(line)
 
         # Join and return the lines
-        result = "".join(selected_lines)
+        result = "".join(tail_lines).strip()
 
-        if not result.strip():
+        if not result:
             if grep:
                 return f"No log entries found matching pattern '{grep}'"
             else:
