@@ -27,7 +27,8 @@ def get_logs(tail: int, *, grep: Optional[str] = None) -> str:
 
     Arguments:
       * `tail`: The number of log entries to return from the end of the log
-      * `grep`: Filter logs with the given regular expression (case insensitive). E.g. "error" when you want to capture errors in particular
+      * `grep`: Filter logs with the given regular expression (case insensitive)
+        E.g. "error" when you want to capture errors in particular
     """
     if not log_file.exists():
         return ""

@@ -4,8 +4,8 @@ MCP Tools module
 
 from .base import MCPTool
 from .get_logs import get_logs
-from .source import get_source_location, get_docs
 from .project_eval import project_eval
+from .source import get_docs, get_source_location
 
 __all__ = [
     "MCPTool",
