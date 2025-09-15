@@ -22,12 +22,11 @@ def project_eval(
 
     Arguments:
 
-      * `code`: The Python code to evaluate.
-      * `arguments`: A list of arguments to pass to evaluation.
-        They are available inside the evaluated code as `arguments`.
+      * `code`: The Python code to evaluate
+      * `arguments`: A list of arguments to pass to evaluation
+        They are available inside the evaluated code as `arguments`
       * `timeout`: The maximum time to wait for execution, in milliseconds.
-        Defaults to `30_000`.
-
+        Defaults to `30_000`
     """
 
     # Note that we run the code in a separate OS process. This allows

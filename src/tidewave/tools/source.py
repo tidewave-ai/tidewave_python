@@ -18,8 +18,9 @@ def get_source_location(reference: str) -> str:
     This works for modules in the current project as well as dependencies.
     This tool only works if you know the specific module/function/method being targeted.
 
-    Args:
-        reference: The module/class/method to lookup
+    Arguments:
+
+      * `reference`: the module/class/method to lookup
     """
     if not reference or not isinstance(reference, str):
         raise ValueError("Reference must be a non-empty string")
@@ -57,8 +58,9 @@ def get_docs(reference: str) -> str:
     This works for modules in the current project as well as dependencies.
     This tool only works if you know the specific module/function/method being targeted.
 
-    Args:
-        reference: The module/class/method to lookup
+    Arguments:
+
+      * `reference`: the module/class/method to lookup
     """
     if not reference or not isinstance(reference, str):
         raise ValueError("Reference must be a non-empty string")
