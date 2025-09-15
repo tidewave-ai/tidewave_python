@@ -39,8 +39,8 @@ class Middleware(MiddlewareMixin):
         # Create MCP handler with tools
         self.mcp_handler = MCPHandler(
             [
-                tools.get_source_location,
                 tools.get_docs,
+                tools.get_source_location,
                 tools.project_eval,
             ]
         )
