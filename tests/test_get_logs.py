@@ -67,19 +67,22 @@ class TestGetLogs(unittest.TestCase):
         self.assertIn(message2, result)
 
     def test_get_logs_with_invalid_regex(self):
-        """Test that invalid regex returns appropriate error message."""
-        result = get_logs(tail=10, grep="[invalid")
-        self.assertIn("Invalid regular expression", result)
+        """Test that invalid regex raises ValueError."""
+        with self.assertRaises(ValueError) as cm:
+            get_logs(tail=10, grep="[invalid")
+        self.assertIn("Invalid regular expression", str(cm.exception))
 
     def test_get_logs_with_zero_tail(self):
-        """Test that zero tail returns appropriate error message."""
-        result = get_logs(tail=0)
-        self.assertEqual(result, "Tail parameter must be a positive integer")
+        """Test that zero tail raises ValueError."""
+        with self.assertRaises(ValueError) as cm:
+            get_logs(tail=0)
+        self.assertEqual(str(cm.exception), "Tail parameter must be a positive integer")
 
     def test_get_logs_with_negative_tail(self):
-        """Test that negative tail returns appropriate error message."""
-        result = get_logs(tail=-5)
-        self.assertEqual(result, "Tail parameter must be a positive integer")
+        """Test that negative tail raises ValueError."""
+        with self.assertRaises(ValueError) as cm:
+            get_logs(tail=-5)
+        self.assertEqual(str(cm.exception), "Tail parameter must be a positive integer")
 
     def test_get_logs_unicode_content(self):
         """Test that unicode characters in log messages are handled correctly."""

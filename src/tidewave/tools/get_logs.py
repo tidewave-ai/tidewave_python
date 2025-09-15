@@ -35,37 +35,33 @@ def get_logs(tail: int, *, grep: Optional[str] = None) -> str:
         return ""
 
     if tail <= 0:
-        return "Tail parameter must be a positive integer"
+        raise ValueError("Tail parameter must be a positive integer")
 
-    try:
-        regex = None
+    regex = None
+    if grep:
+        try:
+            regex = re.compile(grep, re.IGNORECASE)
+        except re.error as e:
+            raise ValueError(f"Invalid regular expression '{grep}': {e}") from e
+
+    # Use deque to keep only last `tail` lines.
+    tail_lines = deque(maxlen=tail)
+
+    with open(log_file, encoding="utf-8") as f:
+        if regex:
+            for line in filter(regex.search, f):
+                tail_lines.append(line)
+        else:
+            for line in f:
+                tail_lines.append(line)
+
+    # Join and return the lines
+    result = "".join(tail_lines).strip()
+
+    if not result:
         if grep:
-            try:
-                regex = re.compile(grep, re.IGNORECASE)
-            except re.error as e:
-                return f"Invalid regular expression '{grep}': {e}"
+            return f"No log entries found matching pattern '{grep}'"
+        else:
+            return "No log entries found"
 
-        # Use deque to keep only last `tail` lines.
-        tail_lines = deque(maxlen=tail)
-
-        with open(log_file, encoding="utf-8") as f:
-            if regex:
-                for line in filter(regex.search, f):
-                    tail_lines.append(line)
-            else:
-                for line in f:
-                    tail_lines.append(line)
-
-        # Join and return the lines
-        result = "".join(tail_lines).strip()
-
-        if not result:
-            if grep:
-                return f"No log entries found matching pattern '{grep}'"
-            else:
-                return "No log entries found"
-
-        return result
-
-    except Exception as e:
-        return f"Error reading log file: {e}"
+    return result
