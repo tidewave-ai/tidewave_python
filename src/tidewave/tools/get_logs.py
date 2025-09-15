@@ -15,7 +15,7 @@ log_file = temp_dir / f"{digest}.tidewave.log"
 
 file_handler = logging.FileHandler(log_file, mode="a", encoding="utf-8")
 file_handler.setLevel(logging.DEBUG)
-file_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+file_handler.setFormatter(logging.Formatter("%(name)s : %(asctime)s - %(levelname)s - %(message)s"))
 
 logging.getLogger().addHandler(file_handler)
 

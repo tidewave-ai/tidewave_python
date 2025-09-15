@@ -3,6 +3,7 @@ Django-specific middleware for Tidewave MCP integration
 """
 
 import io
+import logging
 from typing import Any, Callable
 
 from django.conf import settings
@@ -12,6 +13,7 @@ from django.utils.deprecation import MiddlewareMixin
 from tidewave import tools
 from tidewave.mcp_handler import MCPHandler
 from tidewave.middleware import Middleware as BaseMiddleware
+from tidewave.tools.get_logs import file_handler
 
 
 class Middleware(MiddlewareMixin):
@@ -35,6 +37,13 @@ class Middleware(MiddlewareMixin):
     def __init__(self, get_response: Callable):
         """Initialize Django middleware"""
         super().__init__(get_response)
+
+        django_logger = logging.getLogger("django")
+        if file_handler not in django_logger.handlers:
+            django_logger.addHandler(file_handler)
+            django_logger.setLevel(logging.DEBUG)
+            django_logger.propagate = False
+
         self.get_response = get_response
 
         # Create MCP handler with tools
