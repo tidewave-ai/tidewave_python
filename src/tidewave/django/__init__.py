@@ -29,6 +29,7 @@ class Middleware(MiddlewareMixin):
     Configuration:
         - ALLOWED_HOSTS: Used as allowed origins
         - TIDEWAVE['allow_remote_access']: Whether to allow remote connections (default False)
+        - TIDEWAVE['team']: Enable Tidewave for teams
     """
 
     def __init__(self, get_response: Callable):
@@ -66,6 +67,7 @@ class Middleware(MiddlewareMixin):
         tidewave_settings = getattr(settings, "TIDEWAVE", {})
         allow_remote_access = tidewave_settings.get("allow_remote_access", False)
         client_url = tidewave_settings.get("client_url", "https://tidewave.ai")
+        team = tidewave_settings.get("team", {})
 
         project_name = "django_app"
         try:
@@ -79,6 +81,7 @@ class Middleware(MiddlewareMixin):
             "client_url": client_url,
             "allow_remote_access": allow_remote_access,
             "allowed_origins": allowed_hosts,
+            "team": team,
         }
 
         return config

@@ -92,6 +92,7 @@ class Middleware:
         client_config = {
             "project_name": self.config.get("project_name", "unknown"),
             "framework_type": self.config.get("framework_type", "unknown"),
+            "team": self.config.get("team", {}),
             "tidewave_version": __version__,
         }
         config_json = html.escape(json.dumps(client_config))

@@ -62,13 +62,13 @@ class TestMiddleware(TestMiddlewareBase):
 
         result = self.middleware(environ, self.start_response)
 
-        # Should call the wrapped app
         self.demo_app.assert_called_once_with(environ, self.start_response)
         self.assertEqual(result, [b"demo response"])
 
     def test_home_route_returns_html(self):
         """Test that /tidewave/ returns a valid HTML response"""
-        result = self.middleware._handle_home_route(self.start_response)
+        environ = self._create_environ("/tidewave")
+        result = self.middleware(environ, self.start_response)
 
         self.start_response.assert_called_once()
         call_args = self.start_response.call_args[0]
@@ -79,6 +79,7 @@ class TestMiddleware(TestMiddlewareBase):
         self.assertTrue(result)
         self.assertIsInstance(result[0], bytes)
         self.assertIn(b"tidewave:config", result[0].lower())
+        self.assertIn(b"&quot;team&quot;: {}", result[0].lower())
 
     def test_mcp_get_returns_405(self):
         """Test that GET requests to /tidewave/mcp return 405"""
