@@ -40,9 +40,7 @@ async def main():
     print("Try sending MCP requests to http://localhost:8000/tidewave/mcp")
     print("Press Ctrl+C to stop")
 
-    uvicorn_config = uvicorn.Config(
-        app=app, host="localhost", port=8000, log_level="info"
-    )
+    uvicorn_config = uvicorn.Config(app=app, host="localhost", port=8000, log_level="info")
     server = uvicorn.Server(uvicorn_config)
     await server.serve()
 

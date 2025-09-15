@@ -37,9 +37,7 @@ def project_eval(
     timeout = timeout / 1000  # Convert milliseconds to seconds.
 
     queue = multiprocessing.Queue()
-    process = multiprocessing.Process(
-        target=execute_code, args=(code, arguments, queue)
-    )
+    process = multiprocessing.Process(target=execute_code, args=(code, arguments, queue))
     process.start()
     process.join(timeout)
 

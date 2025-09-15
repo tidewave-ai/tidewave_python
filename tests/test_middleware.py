@@ -74,9 +74,7 @@ class TestMiddleware(TestMiddlewareBase):
         call_args = self.start_response.call_args[0]
         self.assertIn("200", call_args[0])
         headers = call_args[1]
-        content_type = next(
-            (value for name, value in headers if name == "Content-Type"), None
-        )
+        content_type = next((value for name, value in headers if name == "Content-Type"), None)
         self.assertEqual(content_type, "text/html")
         self.assertTrue(result)
         self.assertIsInstance(result[0], bytes)
@@ -239,9 +237,7 @@ class TestOriginValidation(TestMiddlewareBase):
         middleware(environ, self.start_response)
 
         # Should not return 403 due to missing origin
-        call_args = (
-            self.start_response.call_args[0] if self.start_response.called else None
-        )
+        call_args = self.start_response.call_args[0] if self.start_response.called else None
         if call_args:
             self.assertNotIn("403", call_args[0])
 
@@ -261,17 +257,13 @@ class TestOriginValidation(TestMiddlewareBase):
 
         for origin in test_origins:
             with self.subTest(origin=origin):
-                environ = self._create_environ(
-                    "/tidewave/mcp", method="POST", origin=origin
-                )
+                environ = self._create_environ("/tidewave/mcp", method="POST", origin=origin)
                 middleware(environ, self.start_response)
 
                 # Should return 403
                 if self.start_response.called:
                     call_args = self.start_response.call_args[0]
-                    self.assertIn(
-                        "403", call_args[0], f"Should have blocked origin: {origin}"
-                    )
+                    self.assertIn("403", call_args[0], f"Should have blocked origin: {origin}")
                 self.start_response.reset_mock()
 
     def test_missing_allowed_origins_uses_defaults(self):
@@ -290,17 +282,13 @@ class TestOriginValidation(TestMiddlewareBase):
 
         for origin in test_origins:
             with self.subTest(origin=origin):
-                environ = self._create_environ(
-                    "/tidewave/mcp", method="POST", origin=origin
-                )
+                environ = self._create_environ("/tidewave/mcp", method="POST", origin=origin)
                 middleware(environ, self.start_response)
 
                 # Should not return 403
                 if self.start_response.called:
                     call_args = self.start_response.call_args[0]
-                    self.assertNotIn(
-                        "403", call_args[0], f"Should have allowed origin: {origin}"
-                    )
+                    self.assertNotIn("403", call_args[0], f"Should have allowed origin: {origin}")
                 self.start_response.reset_mock()
 
     def test_exact_host_match(self):
@@ -319,17 +307,13 @@ class TestOriginValidation(TestMiddlewareBase):
 
         for origin in allowed_origins:
             with self.subTest(origin=origin):
-                environ = self._create_environ(
-                    "/tidewave/mcp", method="POST", origin=origin
-                )
+                environ = self._create_environ("/tidewave/mcp", method="POST", origin=origin)
                 middleware(environ, self.start_response)
 
                 # Should not return 403
                 if self.start_response.called:
                     call_args = self.start_response.call_args[0]
-                    self.assertNotIn(
-                        "403", call_args[0], f"Should allow origin: {origin}"
-                    )
+                    self.assertNotIn("403", call_args[0], f"Should allow origin: {origin}")
                 self.start_response.reset_mock()
 
         # Should not match
@@ -341,9 +325,7 @@ class TestOriginValidation(TestMiddlewareBase):
 
         for origin in disallowed_origins:
             with self.subTest(origin=origin):
-                environ = self._create_environ(
-                    "/tidewave/mcp", method="POST", origin=origin
-                )
+                environ = self._create_environ("/tidewave/mcp", method="POST", origin=origin)
                 middleware(environ, self.start_response)
 
                 # Should return 403
@@ -368,17 +350,13 @@ class TestOriginValidation(TestMiddlewareBase):
 
         for origin in allowed_origins:
             with self.subTest(origin=origin):
-                environ = self._create_environ(
-                    "/tidewave/mcp", method="POST", origin=origin
-                )
+                environ = self._create_environ("/tidewave/mcp", method="POST", origin=origin)
                 middleware(environ, self.start_response)
 
                 # Should not return 403
                 if self.start_response.called:
                     call_args = self.start_response.call_args[0]
-                    self.assertNotIn(
-                        "403", call_args[0], f"Should allow origin: {origin}"
-                    )
+                    self.assertNotIn("403", call_args[0], f"Should allow origin: {origin}")
                 self.start_response.reset_mock()
 
         # Should not match
@@ -390,9 +368,7 @@ class TestOriginValidation(TestMiddlewareBase):
 
         for origin in disallowed_origins:
             with self.subTest(origin=origin):
-                environ = self._create_environ(
-                    "/tidewave/mcp", method="POST", origin=origin
-                )
+                environ = self._create_environ("/tidewave/mcp", method="POST", origin=origin)
                 middleware(environ, self.start_response)
 
                 # Should return 403
@@ -415,17 +391,13 @@ class TestOriginValidation(TestMiddlewareBase):
 
         for origin in test_origins:
             with self.subTest(origin=origin):
-                environ = self._create_environ(
-                    "/tidewave/mcp", method="POST", origin=origin
-                )
+                environ = self._create_environ("/tidewave/mcp", method="POST", origin=origin)
                 middleware(environ, self.start_response)
 
                 # Should not return 403
                 if self.start_response.called:
                     call_args = self.start_response.call_args[0]
-                    self.assertNotIn(
-                        "403", call_args[0], f"Wildcard should allow: {origin}"
-                    )
+                    self.assertNotIn("403", call_args[0], f"Wildcard should allow: {origin}")
                 self.start_response.reset_mock()
 
     def test_ipv6_origin_handling(self):
@@ -442,17 +414,13 @@ class TestOriginValidation(TestMiddlewareBase):
 
         for origin in allowed_origins:
             with self.subTest(origin=origin):
-                environ = self._create_environ(
-                    "/tidewave/mcp", method="POST", origin=origin
-                )
+                environ = self._create_environ("/tidewave/mcp", method="POST", origin=origin)
                 middleware(environ, self.start_response)
 
                 # Should not return 403
                 if self.start_response.called:
                     call_args = self.start_response.call_args[0]
-                    self.assertNotIn(
-                        "403", call_args[0], f"Should allow IPv6: {origin}"
-                    )
+                    self.assertNotIn("403", call_args[0], f"Should allow IPv6: {origin}")
                 self.start_response.reset_mock()
 
 
@@ -480,9 +448,7 @@ class TestShellHandler(TestMiddlewareBase):
 
     def test_invalid_json(self):
         """Test that invalid JSON bodies return 400"""
-        environ = self._create_environ(
-            "/tidewave/shell", method="POST", body="invalid_json"
-        )
+        environ = self._create_environ("/tidewave/shell", method="POST", body="invalid_json")
         result = self.middleware(environ, self.start_response)
 
         call_args = self.start_response.call_args[0]

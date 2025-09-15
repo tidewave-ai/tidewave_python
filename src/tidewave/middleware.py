@@ -78,17 +78,13 @@ class Middleware:
             if method == "POST":
                 return self.mcp_handler.handle_request(environ, start_response)
             else:
-                return self._send_error_response(
-                    start_response, HTTPStatus.METHOD_NOT_ALLOWED
-                )
+                return self._send_error_response(start_response, HTTPStatus.METHOD_NOT_ALLOWED)
 
         if full_path == "/tidewave/shell":
             if method == "POST":
                 return self._handle_shell_command(environ, start_response)
             else:
-                return self._send_error_response(
-                    start_response, HTTPStatus.METHOD_NOT_ALLOWED
-                )
+                return self._send_error_response(start_response, HTTPStatus.METHOD_NOT_ALLOWED)
 
         return self.app(environ, start_response)
 
@@ -117,9 +113,7 @@ class Middleware:
             ("Content-Type", "text/html"),
             ("Content-Length", str(len(template))),
         ]
-        start_response(
-            f"{HTTPStatus.OK.value} {HTTPStatus.OK.phrase}", response_headers
-        )
+        start_response(f"{HTTPStatus.OK.value} {HTTPStatus.OK.phrase}", response_headers)
         return [template.encode("utf-8")]
 
     def _handle_shell_command(
@@ -208,9 +202,7 @@ class Middleware:
 
     def _validate_allowed_origin(self, host: str) -> bool:
         """Validate if origin host is allowed using Django ALLOWED_HOSTS pattern"""
-        allowed_origins = self.config.get(
-            "allowed_origins", [".localhost", "127.0.0.1", "::1"]
-        )
+        allowed_origins = self.config.get("allowed_origins", [".localhost", "127.0.0.1", "::1"])
 
         # Default to local development hosts if empty (like Django's DEBUG mode)
         if not allowed_origins:

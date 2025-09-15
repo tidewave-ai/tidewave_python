@@ -235,9 +235,7 @@ class TestMCPTool(unittest.TestCase):
 
         # Test calling with list
         result1 = tool.validate_and_call({"items": ["apple", "banana", "cherry"]})
-        self.assertIn(
-            "Processed 3 items: apple, banana, cherry", result1["content"][0]["text"]
-        )
+        self.assertIn("Processed 3 items: apple, banana, cherry", result1["content"][0]["text"])
 
         # Test calling with empty list
         result2 = tool.validate_and_call({"items": []})

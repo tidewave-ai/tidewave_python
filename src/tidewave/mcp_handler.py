@@ -44,9 +44,7 @@ class MCPHandler:
             # Read request body
             content_length = int(environ.get("CONTENT_LENGTH", 0))
             if content_length == 0:
-                return self._send_jsonrpc_error(
-                    start_response, None, -32600, "Empty request body"
-                )
+                return self._send_jsonrpc_error(start_response, None, -32600, "Empty request body")
 
             body = environ["wsgi.input"].read(content_length)
 
@@ -54,33 +52,25 @@ class MCPHandler:
             try:
                 message = json.loads(body.decode("utf-8"))
             except (json.JSONDecodeError, UnicodeDecodeError):
-                return self._send_jsonrpc_error(
-                    start_response, None, -32700, "Parse error"
-                )
+                return self._send_jsonrpc_error(start_response, None, -32700, "Parse error")
 
             # Validate JSON-RPC format
             validation_error = self._validate_jsonrpc_message(message)
             if validation_error:
-                return self._send_jsonrpc_error(
-                    start_response, None, -32600, validation_error
-                )
+                return self._send_jsonrpc_error(start_response, None, -32600, validation_error)
 
             # Handle the message
             response = self._handle_message(message)
 
             if response is None:
                 # Notification with no response
-                return self._send_json_response(
-                    start_response, {"status": "ok"}, status=202
-                )
+                return self._send_json_response(start_response, {"status": "ok"}, status=202)
             else:
                 return self._send_json_response(start_response, response)
 
         except Exception as e:
             self.logger.error(f"Error handling MCP request: {str(e)}")
-            return self._send_jsonrpc_error(
-                start_response, None, -32603, "Internal error"
-            )
+            return self._send_jsonrpc_error(start_response, None, -32603, "Internal error")
 
     def _validate_jsonrpc_message(self, message: dict[str, Any]) -> Optional[str]:
         """
@@ -151,26 +141,19 @@ class MCPHandler:
         """Handle ping request"""
         return {"jsonrpc": "2.0", "id": request_id, "result": {}}
 
-    def _handle_initialize(
-        self, request_id: Any, params: dict[str, Any]
-    ) -> dict[str, Any]:
+    def _handle_initialize(self, request_id: Any, params: dict[str, Any]) -> dict[str, Any]:
         """Handle initialize request"""
         client_version = params.get("protocolVersion")
 
         # Validate protocol version
         if not client_version:
-            return self._create_error_response(
-                request_id, -32602, "Protocol version is required"
-            )
+            return self._create_error_response(request_id, -32602, "Protocol version is required")
 
         if client_version < self.PROTOCOL_VERSION:
             return self._create_error_response(
                 request_id,
                 -32602,
-                (
-                    "Unsupported protocol version. "
-                    f"Server supports {self.PROTOCOL_VERSION} or later"
-                ),
+                (f"Unsupported protocol version. Server supports {self.PROTOCOL_VERSION} or later"),
             )
 
         return {
@@ -184,9 +167,7 @@ class MCPHandler:
             },
         }
 
-    def _handle_list_tools(
-        self, request_id: Any, params: dict[str, Any]
-    ) -> dict[str, Any]:
+    def _handle_list_tools(self, request_id: Any, params: dict[str, Any]) -> dict[str, Any]:
         """Handle tools/list request"""
         return {
             "jsonrpc": "2.0",
@@ -194,22 +175,16 @@ class MCPHandler:
             "result": {"tools": self._get_tool_list()},
         }
 
-    def _handle_call_tool(
-        self, request_id: Any, params: dict[str, Any]
-    ) -> dict[str, Any]:
+    def _handle_call_tool(self, request_id: Any, params: dict[str, Any]) -> dict[str, Any]:
         """Handle tools/call request"""
         tool_name = params.get("name")
         arguments = params.get("arguments", {})
 
         if not tool_name:
-            return self._create_error_response(
-                request_id, -32602, "Tool name is required"
-            )
+            return self._create_error_response(request_id, -32602, "Tool name is required")
 
         if tool_name not in self.tools:
-            return self._create_error_response(
-                request_id, -32601, f"Tool '{tool_name}' not found"
-            )
+            return self._create_error_response(request_id, -32601, f"Tool '{tool_name}' not found")
 
         try:
             tool = self.tools[tool_name]
@@ -234,9 +209,7 @@ class MCPHandler:
                 "jsonrpc": "2.0",
                 "id": request_id,
                 "result": {
-                    "content": [
-                        {"type": "text", "text": f"Tool execution failed: {str(e)}"}
-                    ],
+                    "content": [{"type": "text", "text": f"Tool execution failed: {str(e)}"}],
                     "isError": True,
                 },
             }
@@ -252,9 +225,7 @@ class MCPHandler:
             for tool in self.tools.values()
         ]
 
-    def _create_error_response(
-        self, request_id: Any, code: int, message: str
-    ) -> dict[str, Any]:
+    def _create_error_response(self, request_id: Any, code: int, message: str) -> dict[str, Any]:
         """Create JSON-RPC error response"""
         return {
             "jsonrpc": "2.0",

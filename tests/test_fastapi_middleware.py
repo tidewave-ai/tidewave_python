@@ -21,9 +21,7 @@ class TestFastAPIIntegration(unittest.TestCase):
 
         # Check that tidewave route was mounted
         tidewave_routes = [
-            route
-            for route in app.routes
-            if hasattr(route, "path") and "tidewave" in route.path
+            route for route in app.routes if hasattr(route, "path") and "tidewave" in route.path
         ]
         self.assertEqual(len(tidewave_routes), 1)
         self.assertEqual(tidewave_routes[0].path, "/tidewave")
