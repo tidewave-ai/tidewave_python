@@ -26,6 +26,7 @@ class Middleware:
         self.mcp_handler = MCPHandler(
             [
                 tools.get_docs,
+                tools.get_logs,
                 tools.get_source_location,
                 tools.project_eval,
             ]
