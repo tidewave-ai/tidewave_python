@@ -36,6 +36,7 @@ def mount(app: FastAPI, config: Optional[dict[str, Any]] = None):
 
     mcp_handler = MCPHandler(
         [
+            tools.get_docs,
             tools.get_source_location,
             tools.project_eval,
         ]

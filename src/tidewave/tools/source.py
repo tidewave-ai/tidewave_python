@@ -20,38 +20,69 @@ def get_source_location(reference: str) -> str:
 
     Args:
         reference: The module/class/method to lookup
-
-    Returns:
-        String in format "/absolute/path/to/file.py:line_number"
-
-    Raises:
-        NameError: If the reference cannot be found
-        ValueError: If the reference format is invalid
-
     """
     if not reference or not isinstance(reference, str):
         raise ValueError("Reference must be a non-empty string")
 
     reference = reference.strip()
+    obj = _normalized_resolve_reference(reference)
+
+    if obj is None:
+        raise NameError(f"could not find source location for {reference}")
 
     try:
-        obj = _resolve_reference(reference)
-        if obj is None:
+        file_path, line_number = (
+            inspect.getsourcefile(obj),
+            inspect.getsourcelines(obj)[1],
+        )
+        if file_path:
+            return f"{file_path}:{line_number}"
+        else:
             raise NameError(f"could not find source location for {reference}")
+    except (OSError, TypeError) as e:
+        # Some built-ins don't have source (like C extensions)
+        raise NameError(f"could not find source location for {reference}") from e
 
-        try:
-            file_path, line_number = (
-                inspect.getsourcefile(obj),
-                inspect.getsourcelines(obj)[1],
-            )
-            if file_path:
-                return f"{file_path}:{line_number}"
-            else:
-                raise NameError(f"could not find source location for {reference}")
-        except (OSError, TypeError) as e:
-            # Some built-ins don't have source (like C extensions)
-            raise NameError(f"could not find source location for {reference}") from e
 
+def get_docs(reference: str) -> str:
+    """
+    Get documentation for a Python reference.
+
+    The reference may be:
+    - A module/class: `pathlib.Path`, `collections.Counter`
+    - An instance method: `pathlib.Path.resolve`, `collections.Counter.update`
+    - A class method or static method: `pathlib.Path.cwd`, `pathlib.Path.home`
+    - A function: `json.loads`, `uuid.uuid4`
+
+    This works for modules in the current project as well as dependencies.
+    This tool only works if you know the specific module/function/method being targeted.
+
+    Args:
+        reference: The module/class/method to lookup
+    """
+    if not reference or not isinstance(reference, str):
+        raise ValueError("Reference must be a non-empty string")
+
+    reference = reference.strip()
+    obj = _normalized_resolve_reference(reference)
+
+    if obj is None:
+        raise NameError(f"could not find documentation for {reference}")
+
+    try:
+        docs = inspect.getdoc(obj)
+        if docs:
+            return docs
+        else:
+            raise NameError(f"could not find documentation for {reference}")
+    except (OSError, TypeError) as e:
+        # Some built-ins don't have accessible documentation
+        raise NameError(f"could not find documentation for {reference}") from e
+
+
+def _normalized_resolve_reference(reference: str) -> Optional[Any]:
+    try:
+        return _resolve_reference(reference)
     except (ImportError, AttributeError) as e:
         raise NameError(f"could not resolve reference {reference}") from e
     except (TypeError, OSError) as e:
