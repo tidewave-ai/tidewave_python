@@ -3,6 +3,7 @@ Django-specific middleware for Tidewave MCP integration
 """
 
 import io
+import logging
 from typing import Any, Callable
 
 from django.conf import settings
@@ -55,6 +56,8 @@ class Middleware(MiddlewareMixin):
         # Configure middleware based on Django settings
         config = self._build_config()
         self.base_middleware = BaseMiddleware(dummy_wsgi_app, self.mcp_handler, config)
+
+        logging.getLogger("django.server").addFilter(TidewaveLoggerFilter())
 
     def _build_config(self) -> dict[str, Any]:
         """Build configuration based on Django settings"""
@@ -142,3 +145,8 @@ class Middleware(MiddlewareMixin):
         environ["wsgi.input"] = io.BytesIO(request.body)
 
         return environ
+
+
+class TidewaveLoggerFilter:
+    def filter(self, record):
+        return "/tidewave" not in record.getMessage()
