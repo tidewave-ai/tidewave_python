@@ -29,9 +29,9 @@ dev = [
 ]
 
 [tool.ruff]
-line-length = 100
 target-version = "py39"
 
+line-length = 100
 # Set what ruff should check for.
 # See https://beta.ruff.rs/docs/rules/ for a list of rules.
 lint.select = [
