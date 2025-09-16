@@ -9,6 +9,7 @@ from typing import Any, Callable
 from django.conf import settings
 from django.http import HttpResponse
 from django.utils.deprecation import MiddlewareMixin
+from django.utils.log import CallbackFilter
 
 from tidewave import tools
 from tidewave.mcp_handler import MCPHandler
@@ -40,6 +41,16 @@ class Middleware(MiddlewareMixin):
 
         django_logger = logging.getLogger("django")
         if file_handler not in django_logger.handlers:
+            file_handler.addFilter(
+                CallbackFilter(lambda record: record.name != "django.utils.autoreload")
+            )
+            file_handler.addFilter(
+                CallbackFilter(
+                    lambda record: not (
+                        record.name == "django.server" and "/tidewave" in record.getMessage()
+                    )
+                )
+            )
             django_logger.addHandler(file_handler)
             django_logger.setLevel(logging.DEBUG)
             django_logger.propagate = False
