@@ -709,7 +709,6 @@ class TestHeaderRemoval(TestMiddlewareBase):
         # Mock downstream app that returns CSP and X-Frame-Options headers
         def downstream_app_with_headers(environ, start_response):
             headers = [
-                ("Content-Security-Policy", "default-src 'self'"),
                 ("X-Frame-Options", "DENY"),
                 ("Content-Type", "text/html"),
             ]
@@ -732,9 +731,8 @@ class TestHeaderRemoval(TestMiddlewareBase):
         # Check status
         self.assertIn("200", call_args[0])
 
-        # Check headers - CSP and X-Frame-Options should be removed
+        # Check headers - X-Frame-Options should be removed
         headers = dict(call_args[1])
-        self.assertNotIn("Content-Security-Policy", headers)
         self.assertNotIn("X-Frame-Options", headers)
         # Other headers should remain
         self.assertIn("Content-Type", headers)

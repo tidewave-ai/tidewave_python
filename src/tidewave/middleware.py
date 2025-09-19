@@ -94,11 +94,11 @@ class Middleware:
 
         # Call the downstream app and modify headers
         def capture_start_response(status, headers, exc_info=None):
-            # Remove CSP and X-Frame-Options headers to allow embedding the app in Tidewave
+            # Remove X-Frame-Options headers to allow embedding the app in Tidewave
             filtered_headers = [
                 (name, value)
                 for name, value in headers
-                if name.lower() not in ("content-security-policy", "x-frame-options")
+                if name.lower() not in ("x-frame-options")
             ]
             return start_response(status, filtered_headers, exc_info)
 
