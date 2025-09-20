@@ -719,7 +719,7 @@ class TestHeaderRemoval(TestMiddlewareBase):
         self.middleware = self._create_middleware(self.config)
 
     def test_removes_csp_and_xframe_headers(self):
-        """Test that CSP and X-Frame-Options headers are removed from all responses"""
+        """Test iframe blocking headers are removed from all responses"""
         environ = self._create_environ("/some-route")
 
         result = self.middleware(environ, self.start_response)
