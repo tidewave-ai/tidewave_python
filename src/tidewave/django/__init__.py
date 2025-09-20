@@ -149,12 +149,6 @@ class Middleware(MiddlewareMixin):
 
         return response
 
-    def process_response(self, request, response):
-        if "X-Frame-Options" in response:
-            del response["X-Frame-Options"]
-
-        return response
-
     def _django_request_to_wsgi_environ(self, request) -> dict[str, Any]:
         """Convert Django request to WSGI environ dict"""
         # Copy Django's META dict (which is the WSGI environ)

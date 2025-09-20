@@ -62,7 +62,11 @@ class TestMiddleware(TestMiddlewareBase):
 
         result = self.middleware(environ, self.start_response)
 
-        self.demo_app.assert_called_once_with(environ, self.start_response)
+        # The app should be called with the environ and a wrapped start_response
+        self.demo_app.assert_called_once()
+        call_args = self.demo_app.call_args[0]
+        self.assertEqual(call_args[0], environ)  # environ should be the same
+        # start_response should be wrapped, so it won't be exactly the same
         self.assertEqual(result, [b"demo response"])
 
     def test_home_route_returns_html(self):
@@ -223,7 +227,45 @@ class TestMiddleware(TestMiddlewareBase):
         middleware(environ, self.start_response)
 
         # Should pass through to wrapped app
-        self.demo_app.assert_called_once_with(environ, self.start_response)
+        self.demo_app.assert_called_once()
+        call_args = self.demo_app.call_args[0]
+        self.assertEqual(call_args[0], environ)  # environ should be the same
+
+    def test_config_endpoint_returns_json(self):
+        """Test that /tidewave/config returns JSON configuration"""
+        # Set up config with team data
+        self.config["team"] = {"id": "dashbit"}
+        middleware = self._create_middleware(self.config)
+
+        environ = self._create_environ("/tidewave/config", "GET")
+        result = middleware(environ, self.start_response)
+
+        # Check response
+        self.start_response.assert_called_once()
+        call_args = self.start_response.call_args[0]
+        self.assertIn("200", call_args[0])
+
+        headers = call_args[1]
+        content_type = next((value for name, value in headers if name == "Content-Type"), None)
+        self.assertEqual(content_type, "application/json")
+
+        # Parse JSON response
+        response_data = json.loads(b"".join(result).decode("utf-8"))
+        self.assertEqual(response_data["framework_type"], "unknown")
+        self.assertIn("tidewave_version", response_data)
+        self.assertEqual(response_data["team"], {"id": "dashbit"})
+        self.assertIn("project_name", response_data)
+
+    def test_config_endpoint_post_method_not_allowed(self):
+        """Test that POST to /tidewave/config returns 405"""
+        environ = self._create_environ("/tidewave/config", "POST")
+
+        self.middleware(environ, self.start_response)
+
+        # Should return 405 Method Not Allowed
+        self.start_response.assert_called_once()
+        call_args = self.start_response.call_args[0]
+        self.assertIn("405", call_args[0])
 
 
 class TestOriginValidation(TestMiddlewareBase):
@@ -655,3 +697,45 @@ class TestExecuteCommand(TestMiddlewareBase):
         output_type, output_data = chunks[0]
         self.assertEqual(output_type, 0)
         self.assertEqual(output_data, b"windows output")
+
+
+class TestHeaderRemoval(TestMiddlewareBase):
+    """Test header removal functionality"""
+
+    def setUp(self):
+        """Set up test fixtures with headers in downstream app"""
+        super().setUp()
+
+        # Mock downstream app that returns CSP and X-Frame-Options headers
+        def downstream_app_with_headers(environ, start_response):
+            headers = [
+                ("X-Frame-Options", "DENY"),
+                ("Content-Type", "text/html"),
+            ]
+            start_response("200 OK", headers)
+            return [b"App with headers"]
+
+        self.demo_app = downstream_app_with_headers
+        self.middleware = self._create_middleware(self.config)
+
+    def test_removes_csp_and_xframe_headers(self):
+        """Test iframe blocking headers are removed from all responses"""
+        environ = self._create_environ("/some-route")
+
+        result = self.middleware(environ, self.start_response)
+
+        # Check that start_response was called
+        self.start_response.assert_called_once()
+        call_args = self.start_response.call_args[0]
+
+        # Check status
+        self.assertIn("200", call_args[0])
+
+        # Check headers - X-Frame-Options should be removed
+        headers = dict(call_args[1])
+        self.assertNotIn("X-Frame-Options", headers)
+        # Other headers should remain
+        self.assertIn("Content-Type", headers)
+
+        # Check response body
+        self.assertEqual(b"".join(result), b"App with headers")

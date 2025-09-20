@@ -74,6 +74,12 @@ class Middleware:
         if full_path == "/tidewave":
             return self._handle_home_route(start_response)
 
+        if full_path == "/tidewave/config":
+            if method == "GET":
+                return self._handle_config_route(start_response)
+            else:
+                return self._send_error_response(start_response, HTTPStatus.METHOD_NOT_ALLOWED)
+
         if full_path == "/tidewave/mcp":
             if method == "POST":
                 return self.mcp_handler.handle_request(environ, start_response)
@@ -86,15 +92,20 @@ class Middleware:
             else:
                 return self._send_error_response(start_response, HTTPStatus.METHOD_NOT_ALLOWED)
 
-        return self.app(environ, start_response)
+        # Call the downstream app and modify headers
+        def capture_start_response(status, headers, exc_info=None):
+            # Remove X-Frame-Options headers to allow embedding the app in Tidewave
+            filtered_headers = [
+                (name, value)
+                for name, value in headers
+                if name.lower() not in ("x-frame-options")
+            ]
+            return start_response(status, filtered_headers, exc_info)
+
+        return self.app(environ, capture_start_response)
 
     def _handle_home_route(self, start_response: Callable) -> Iterator[bytes]:
-        client_config = {
-            "project_name": self.config.get("project_name", "unknown"),
-            "framework_type": self.config.get("framework_type", "unknown"),
-            "team": self.config.get("team", {}),
-            "tidewave_version": __version__,
-        }
+        client_config = self._get_config_data()
         config_json = html.escape(json.dumps(client_config))
 
         template = f"""
@@ -116,6 +127,27 @@ class Middleware:
         ]
         start_response(f"{HTTPStatus.OK.value} {HTTPStatus.OK.phrase}", response_headers)
         return [template.encode("utf-8")]
+
+    def _handle_config_route(self, start_response: Callable) -> Iterator[bytes]:
+        """Handle GET /tidewave/config route to return JSON configuration"""
+        config_data = self._get_config_data()
+        config_json = json.dumps(config_data)
+
+        response_headers = [
+            ("Content-Type", "application/json"),
+            ("Content-Length", str(len(config_json))),
+        ]
+        start_response(f"{HTTPStatus.OK.value} {HTTPStatus.OK.phrase}", response_headers)
+        return [config_json.encode("utf-8")]
+
+    def _get_config_data(self) -> dict[str, Any]:
+        """Get configuration data for client"""
+        return {
+            "project_name": self.config.get("project_name", "unknown"),
+            "framework_type": self.config.get("framework_type", "unknown"),
+            "team": self.config.get("team", {}),
+            "tidewave_version": __version__,
+        }
 
     def _handle_shell_command(
         self, environ: dict[str, Any], start_response: Callable
