@@ -3,7 +3,7 @@ from unittest.mock import Mock, patch
 
 from django.template import Context, Template
 from django.template.loader import render_to_string
-from django.template.loader_tags import BlockNode, ExtendsNode
+from django.template.loader_tags import BlockNode
 from django.test import TestCase, override_settings
 
 from tidewave.django.apps import TidewaveConfig
@@ -11,7 +11,7 @@ from tidewave.django.templates import (
     clean_template_path,
     debug_block_render,
     debug_render,
-    get_debug_name,
+    recurse_inheritance_chain,
 )
 
 TEMPLATES_PATH = Path(__file__).parent / "templates"
@@ -81,8 +81,8 @@ class TestTemplateDebugRender(TestCase):
 
         # Patch Template.render
         Template.render = debug_render
-        Template._tidewave_debug_name = get_debug_name
         Template._tidewave_template_path = clean_template_path
+        Template._tidewave_inheritance_chain = recurse_inheritance_chain
         Template._tidewave_patched = True
 
         # Patch BlockNode.render
@@ -138,28 +138,6 @@ class TestTemplateDebugRender(TestCase):
 
         self.assertNotIn("<!-- TEMPLATE:", result)
         self.assertEqual(result, template_content)
-
-    def test_template_with_extends_shows_parent(self):
-        """Test that templates with extends show parent template info"""
-        self._apply_debug_patch()
-
-        template_content = "<div>Child content</div>"
-        template = Template(template_content)
-        template.origin = Mock()
-        template.origin.template_name = "child.html"
-
-        extends_node = Mock(spec=ExtendsNode)
-        extends_node.parent_name = "'base.html'"
-        extends_node.render_annotated.return_value = ""  # ExtendsNode doesn't render content
-        template.nodelist.insert(0, extends_node)
-
-        result = template.render(Context({}))
-
-        expected_start = "<!-- TEMPLATE: child.html EXTENDS: base.html -->"
-        expected_end = "<!-- END TEMPLATE: child.html -->"
-
-        self.assertIn(expected_start, result)
-        self.assertIn(expected_end, result)
 
     def test_template_origin_name_fallback(self):
         """Test fallback to origin.name when template_name not available"""
@@ -236,37 +214,6 @@ class TestTemplateDebugRender(TestCase):
 
         result = template._tidewave_template_path(None)
         self.assertIsNone(result)
-
-    def test_get_debug_name_with_extends(self):
-        """Test get_debug_name method with extends node"""
-        self._apply_debug_patch()
-
-        template = Template("<div>Test</div>")
-        template.origin = Mock()
-        template.origin.template_name = "test.html"
-
-        extends_node = Mock(spec=ExtendsNode)
-        extends_node.parent_name = "'base.html'"
-        extends_node.render_annotated.return_value = ""
-        template.nodelist.insert(0, extends_node)
-
-        name, extends = template._tidewave_debug_name()
-
-        self.assertEqual(name, "test.html")
-        self.assertEqual(extends, "base.html")
-
-    def test_get_debug_name(self):
-        """Test get_debug_name method"""
-        self._apply_debug_patch()
-
-        template = Template("<div>Test</div>")
-        template.origin = Mock()
-        template.origin.template_name = "test.html"
-
-        name, extends = template._tidewave_debug_name()
-
-        self.assertEqual(name, "test.html")
-        self.assertIsNone(extends)
 
     @override_settings(DEBUG=False)
     def test_config_ready_not_applied_when_debug_false(self):
@@ -449,7 +396,7 @@ class TestTemplateDebugRender(TestCase):
         self.assertEqual(
             result.replace("\n", "").strip(),
             (
-                "<!-- TEMPLATE: child.html EXTENDS: base.html -->"
+                "<!-- TEMPLATE: child.html, EXTENDS: base.html -->"
                 f"<!-- START BLOCK: content, TEMPLATE: {TEMPLATES_PATH / 'child.html'} -->"
                 f"<!-- START BLOCK: content, TEMPLATE: {TEMPLATES_PATH / 'base.html'} -->"
                 "<p>Base content</p>"
@@ -457,6 +404,23 @@ class TestTemplateDebugRender(TestCase):
                 "<p>Child content</p>"
                 "<!-- END BLOCK: content -->"
                 "<!-- END TEMPLATE: child.html -->"
+            ),
+        )
+
+    def test_grandchild_template_inheritance(self):
+        """Test that grandchild template properly shows full inheritance chain"""
+        self._apply_debug_patch()
+
+        result = render_to_string("grandchild.html")
+
+        self.assertEqual(
+            result.replace("\n", "").strip(),
+            (
+                "<!-- TEMPLATE: grandchild.html, EXTENDS: child.html, EXTENDS: base.html -->"
+                f"<!-- START BLOCK: content, TEMPLATE: {TEMPLATES_PATH / 'grandchild.html'} -->"
+                "<p>Grandchild content</p>"
+                "<!-- END BLOCK: content -->"
+                "<!-- END TEMPLATE: grandchild.html -->"
             ),
         )
 
@@ -469,7 +433,7 @@ class TestTemplateDebugRender(TestCase):
         self.assertEqual(
             result.replace("\n", "").strip(),
             (
-                "<!-- TEMPLATE: child-includes.html EXTENDS: base.html -->"
+                "<!-- TEMPLATE: child-includes.html, EXTENDS: base.html -->"
                 f"<!-- START BLOCK: content, TEMPLATE: {TEMPLATES_PATH / 'child-includes.html'} -->"
                 "<p>Child content</p>"
                 "<!-- TEMPLATE: include.html -->"
