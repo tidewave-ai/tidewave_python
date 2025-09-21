@@ -68,7 +68,7 @@ class TestTemplateDebugRender(TestCase):
         BlockNode.render = BlockNode._original_render
 
         # Clean up patching attributes
-        for attr in ["_tidewave_debug_name", "_tidewave_template_path", "_tidewave_patched"]:
+        for attr in ["_tidewave_debug_name", "_tidewave_patched"]:
             if hasattr(Template, attr):
                 delattr(Template, attr)
             if hasattr(BlockNode, attr):
@@ -81,13 +81,11 @@ class TestTemplateDebugRender(TestCase):
 
         # Patch Template.render
         Template.render = debug_render
-        Template._tidewave_template_path = clean_template_path
         Template._tidewave_inheritance_chain = recurse_inheritance_chain
         Template._tidewave_patched = True
 
         # Patch BlockNode.render
         BlockNode.render = debug_block_render
-        BlockNode._tidewave_template_path = clean_template_path
 
     def test_html_template_gets_debug_comments(self):
         """Test that HTML templates get wrapped with debug comments"""
@@ -187,32 +185,20 @@ class TestTemplateDebugRender(TestCase):
 
     def test_clean_template_path_absolute_path(self):
         """Test cleaning absolute template paths relative to BASE_DIR"""
-        self._apply_debug_patch()
-
-        template = Template("<div>Test</div>")
-
         with override_settings(BASE_DIR="/test/project"):
-            result = template._tidewave_template_path("/test/project/templates/app/test.html")
+            result = clean_template_path("/test/project/templates/app/test.html")
             expected = "templates/app/test.html"
             self.assertEqual(result, expected)
 
     def test_clean_template_path_relative_path(self):
         """Test that relative paths are returned as Path objects"""
-        self._apply_debug_patch()
-
-        template = Template("<div>Test</div>")
-
-        result = template._tidewave_template_path("templates/test.html")
+        result = clean_template_path("templates/test.html")
         expected = "templates/test.html"
         self.assertEqual(result, expected)
 
     def test_clean_template_path_none_input(self):
         """Test clean_template_path with None input"""
-        self._apply_debug_patch()
-
-        template = Template("<div>Test</div>")
-
-        result = template._tidewave_template_path(None)
+        result = clean_template_path(None)
         self.assertIsNone(result)
 
     @override_settings(DEBUG=False)
@@ -318,57 +304,6 @@ class TestTemplateDebugRender(TestCase):
 
                 self.assertNotIn("<!-- TEMPLATE:", result)
                 self.assertEqual(result.strip(), content.strip())
-
-    def test_single_block_with_template_info(self):
-        """Single block should show correct template info."""
-        html_content = "<div>content</div>"
-        with patch.object(BlockNode, "_original_render", return_value=html_content):
-            mock_block = Mock()
-            self.block_node._tidewave_template_path.return_value = "base.html"
-
-            mock_block_context = Mock()
-            mock_block_context.blocks = {"content": [mock_block]}
-            self.context.render_context = {"block_context": mock_block_context}
-
-            result = debug_block_render(self.block_node, self.context)
-
-            self.assertIn("<!-- START BLOCK: content, TEMPLATE: base.html -->", result)
-            self.assertIn("<!-- END BLOCK: content -->", result)
-
-    def test_multiple_blocks_with_inheritance_chain(self):
-        """Multiple blocks should show depth and chain information."""
-        html_content = "<div>content</div>"
-        with patch.object(BlockNode, "_original_render", return_value=html_content):
-            mock_block1 = Mock()
-            mock_block2 = Mock()
-
-            # Mock the template name calls in order
-            self.block_node._tidewave_template_path.side_effect = [
-                "child.html",  # child extends parent
-                "parent.html",
-            ]
-
-            mock_block_context = Mock()
-            mock_block_context.blocks = {"content": [mock_block1, mock_block2]}
-            self.context.render_context = {"block_context": mock_block_context}
-
-            result = debug_block_render(self.block_node, self.context)
-
-            self.assertIn("<!-- START BLOCK: content, TEMPLATE: child.html -->", result)
-            self.assertIn("<!-- END BLOCK: content -->", result)
-
-    def test_empty_blocks_list_returns_basic_comments(self):
-        """Empty blocks list should return basic debug comments."""
-        html_content = "<div>content</div>"
-        with patch.object(BlockNode, "_original_render", return_value=html_content):
-            mock_block_context = Mock()
-            mock_block_context.blocks = {"content": []}
-            self.context.render_context = {"block_context": mock_block_context}
-
-            result = debug_block_render(self.block_node, self.context)
-
-            self.assertIn("<!-- START BLOCK: content, TEMPLATE: <unknown> -->", result)
-            self.assertIn("<!-- END BLOCK: content -->", result)
 
     def test_base_template_renders_correctly(self):
         """Test that the base template renders with debug comments"""

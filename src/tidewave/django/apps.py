@@ -4,7 +4,6 @@ from django.template import Template
 from django.template.loader_tags import BlockNode
 
 from tidewave.django.templates import (
-    clean_template_path,
     debug_block_render,
     debug_render,
     recurse_inheritance_chain,
@@ -29,10 +28,8 @@ class TidewaveConfig(AppConfig):
 
         # Patch Template.render
         Template.render = debug_render
-        Template._tidewave_template_path = clean_template_path
         Template._tidewave_inheritance_chain = recurse_inheritance_chain
         Template._tidewave_patched = True
 
         # Patch BlockNode.render
         BlockNode.render = debug_block_render
-        BlockNode._tidewave_template_path = clean_template_path

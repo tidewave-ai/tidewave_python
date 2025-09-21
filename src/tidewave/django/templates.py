@@ -27,7 +27,7 @@ def debug_render(self, context) -> str:
     if not template_name:
         return content
 
-    display_name = self._tidewave_template_path(template_name)
+    display_name = clean_template_path(template_name)
 
     # Gather inheritance chain info
     inheritance_chain = self._tidewave_inheritance_chain(context)
@@ -56,13 +56,13 @@ def debug_block_render(self, context) -> str:
         blocks = block_context.blocks.get(self.name, [])
         block = blocks[-1] if blocks else None
         if hasattr(block, "origin") and block.origin and hasattr(block.origin, "name"):
-            template_name = self._tidewave_template_path(block.origin.name)
+            template_name = clean_template_path(block.origin.name)
 
     # Fallback to context's template if available, this happens when there's no inheritance.
     if not template_name:
         template = getattr(context, "template", None)
         if template and hasattr(template, "origin") and template.origin:
-            template_name = self._tidewave_template_path(template.origin.name)
+            template_name = clean_template_path(template.origin.name)
 
     start_comment = f"<!-- START BLOCK: {self.name}, TEMPLATE: {template_name or '<unknown>'} -->"
     end_comment = f"<!-- END BLOCK: {self.name} -->"
@@ -70,7 +70,7 @@ def debug_block_render(self, context) -> str:
     return mark_safe(f"{start_comment}{content}{end_comment}")
 
 
-def clean_template_path(self, template_name) -> Optional[str]:
+def clean_template_path(template_name) -> Optional[str]:
     """Clean up template path for display."""
     if not template_name:
         return
@@ -88,11 +88,11 @@ def clean_template_path(self, template_name) -> Optional[str]:
     return str(template_path)
 
 
-def recurse_inheritance_chain(template, context) -> list[str]:
-    chain = [template.name if template.name else "<unknown>"]
+def recurse_inheritance_chain(self, context) -> list[str]:
+    chain = [self.name if self.name else "<unknown>"]
 
     extends_node = None
-    for node in template.nodelist:
+    for node in self.nodelist:
         if isinstance(node, ExtendsNode):
             extends_node = node
             break
@@ -108,7 +108,7 @@ def recurse_inheritance_chain(template, context) -> list[str]:
                 parent_name = extends_node.parent_name.var
             else:
                 parent_name = str(extends_node.parent_name)
-            parent_template = template.engine.get_template(parent_name)
+            parent_template = self.engine.get_template(parent_name)
 
         # Recursively get the parent's chain
         parent_chain = recurse_inheritance_chain(parent_template, context)
