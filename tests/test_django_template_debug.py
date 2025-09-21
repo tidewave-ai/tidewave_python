@@ -11,7 +11,6 @@ from tidewave.django.templates import (
     clean_template_path,
     debug_block_render,
     debug_render,
-    recurse_inheritance_chain,
 )
 
 TEMPLATES_PATH = Path(__file__).parent / "templates"
@@ -81,7 +80,6 @@ class TestTemplateDebugRender(TestCase):
 
         # Patch Template.render
         Template.render = debug_render
-        Template._tidewave_inheritance_chain = recurse_inheritance_chain
         Template._tidewave_patched = True
 
         # Patch BlockNode.render

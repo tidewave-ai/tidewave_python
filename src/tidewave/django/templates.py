@@ -30,7 +30,7 @@ def debug_render(self, context) -> str:
     display_name = clean_template_path(template_name)
 
     # Gather inheritance chain info
-    inheritance_chain = self._tidewave_inheritance_chain(context)
+    inheritance_chain = recurse_inheritance_chain(self, context)
 
     extends_info = "".join(f", EXTENDS: {n}" for n in inheritance_chain[1:])
     start_comment = f"<!-- TEMPLATE: {display_name}{extends_info} -->"
@@ -88,11 +88,11 @@ def clean_template_path(template_name) -> Optional[str]:
     return str(template_path)
 
 
-def recurse_inheritance_chain(self, context) -> list[str]:
-    chain = [self.name if self.name else "<unknown>"]
+def recurse_inheritance_chain(template, context) -> list[str]:
+    chain = [template.name if template.name else "<unknown>"]
 
     extends_node = None
-    for node in self.nodelist:
+    for node in template.nodelist:
         if isinstance(node, ExtendsNode):
             extends_node = node
             break
@@ -108,7 +108,7 @@ def recurse_inheritance_chain(self, context) -> list[str]:
                 parent_name = extends_node.parent_name.var
             else:
                 parent_name = str(extends_node.parent_name)
-            parent_template = self.engine.get_template(parent_name)
+            parent_template = template.engine.get_template(parent_name)
 
         # Recursively get the parent's chain
         parent_chain = recurse_inheritance_chain(parent_template, context)
