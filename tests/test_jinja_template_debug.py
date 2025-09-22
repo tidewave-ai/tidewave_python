@@ -123,3 +123,23 @@ class TestJinjaTemplateDebug(TestCase):
         self.assertEqual(result, expected)
         self.assertNotIn("<!-- TEMPLATE:", result)
         self.assertNotIn("<!-- END TEMPLATE:", result)
+
+    def test_child_template_with_includes(self):
+        """Test that child template properly wraps included templates"""
+        template = self.env.get_template('child-includes.html')
+        result = template.render(value="foo")
+
+        expected = (
+            "<!-- TEMPLATE: tests/jinja2/child-includes.html -->\n"
+            "<!-- TEMPLATE: tests/jinja2/base.html -->\n"
+            "\n"
+            "<p>Child content</p>\n"
+            "<!-- TEMPLATE: tests/jinja2/include.html -->\n"
+            "<p>Included content: foo</p>\n"
+            "<!-- END TEMPLATE: tests/jinja2/include.html -->\n"
+            "\n"
+            "\n"
+            "<!-- END TEMPLATE: tests/jinja2/base.html -->"
+        )
+
+        self.assertEqual(result, expected)
