@@ -232,7 +232,7 @@ class TestTemplateDebugRender(TestCase):
         # Remove origin to test
         del template.origin
 
-        with self.assertLogs("tidewave.django.templates", level="WARNING") as log_context:
+        with self.assertLogs("django", level="WARNING") as log_context:
             result = template.render(Context({}))
 
         self.assertEqual(result, template_content)
