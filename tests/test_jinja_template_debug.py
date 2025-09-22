@@ -20,15 +20,49 @@ class TemplateAnnotationExtension(Extension):
         return source
 
     def _has_html_content_in_ast(self, body):
-        """Check if AST body contains HTML tags by analyzing text nodes"""
         for node in body:
             for text_node in node.find_all(nodes.TemplateData):
                 if '<' in text_node.data:
                     return True
         return False
 
+    def _has_html_content_in_node(self, node):
+        for text_node in node.find_all(nodes.TemplateData):
+            if '<' in text_node.data:
+                return True
+        return False
+
+    def _wrap_blocks_with_annotations(self, body, template_filename):
+        wrapped_body = []
+
+        for node in body:
+            if isinstance(node, nodes.Block):
+                if self._has_html_content_in_node(node):
+                    block_start = nodes.Output([
+                        nodes.TemplateData(f"<!-- BLOCK: {node.name}, TEMPLATE: {template_filename} -->\n")
+                    ]).set_lineno(node.lineno)
+
+                    node.body = self._wrap_blocks_with_annotations(node.body, template_filename)
+
+                    block_end = nodes.Output([
+                        nodes.TemplateData(f"\n<!-- END BLOCK: {node.name} -->")
+                    ]).set_lineno(node.lineno)
+
+                    wrapped_body.extend([block_start, node, block_end])
+                else:
+                    node.body = self._wrap_blocks_with_annotations(node.body, template_filename)
+                    wrapped_body.append(node)
+            else:
+                # For non-block nodes, recursively process any nested blocks
+                if hasattr(node, 'body') and isinstance(node.body, list):
+                    node.body = self._wrap_blocks_with_annotations(node.body, template_filename)
+                elif hasattr(node, 'nodes') and isinstance(node.nodes, list):
+                    node.nodes = self._wrap_blocks_with_annotations(node.nodes, template_filename)
+                wrapped_body.append(node)
+
+        return wrapped_body
+
     def parse(self, parser):
-        """Parse the template_debug tag"""
         lineno = next(parser.stream).lineno
         template_filename = parser.parse_expression()
         body = parser.parse_statements(['name:endtemplate_debug'], drop_needle=True)
@@ -37,6 +71,9 @@ class TemplateAnnotationExtension(Extension):
             return body
 
         filename_value = template_filename.as_const()
+
+        # Wrap blocks with annotations
+        body = self._wrap_blocks_with_annotations(body, filename_value)
 
         start_comment = nodes.Output([
             nodes.TemplateData(f"<!-- TEMPLATE: {filename_value} -->\n")
@@ -69,9 +106,11 @@ class TestJinjaTemplateDebug(TestCase):
 
         expected = (
             "<!-- TEMPLATE: tests/jinja2/base.html -->\n"
+            "<!-- BLOCK: content, TEMPLATE: tests/jinja2/base.html -->\n"
             "\n"
             "<p>Base content</p>\n"
             "\n"
+            "<!-- END BLOCK: content -->\n"
             "\n"
             "<!-- END TEMPLATE: tests/jinja2/base.html -->"
         )
@@ -87,11 +126,13 @@ class TestJinjaTemplateDebug(TestCase):
         expected = (
             "<!-- TEMPLATE: tests/jinja2/child.html -->\n"
             "<!-- TEMPLATE: tests/jinja2/base.html -->\n"
+            "<!-- BLOCK: content, TEMPLATE: tests/jinja2/base.html -->\n"
             " \n"
             "<p>Base content</p>\n"
             "\n"
             "<p>Child content</p>\n"
             "\n"
+            "<!-- END BLOCK: content -->\n"
             "\n"
             "<!-- END TEMPLATE: tests/jinja2/base.html -->"
         )
@@ -132,12 +173,14 @@ class TestJinjaTemplateDebug(TestCase):
         expected = (
             "<!-- TEMPLATE: tests/jinja2/child-includes.html -->\n"
             "<!-- TEMPLATE: tests/jinja2/base.html -->\n"
+            "<!-- BLOCK: content, TEMPLATE: tests/jinja2/base.html -->\n"
             "\n"
             "<p>Child content</p>\n"
             "<!-- TEMPLATE: tests/jinja2/include.html -->\n"
             "<p>Included content: foo</p>\n"
             "<!-- END TEMPLATE: tests/jinja2/include.html -->\n"
             "\n"
+            "<!-- END BLOCK: content -->\n"
             "\n"
             "<!-- END TEMPLATE: tests/jinja2/base.html -->"
         )
