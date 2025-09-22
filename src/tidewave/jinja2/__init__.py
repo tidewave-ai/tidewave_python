@@ -1,4 +1,5 @@
 import os
+
 from jinja2 import nodes
 from jinja2.ext import Extension
 
@@ -6,7 +7,7 @@ from jinja2.ext import Extension
 class TemplateAnnotationExtension(Extension):
     """Jinja2 extension that adds HTML comments around templates using AST manipulation"""
 
-    tags = {'template_debug'}
+    tags = {"template_debug"}
 
     def preprocess(self, source, name, filename=None):
         """Preprocess template source to inject filename"""
@@ -19,13 +20,13 @@ class TemplateAnnotationExtension(Extension):
     def _has_html_content_in_ast(self, body):
         for node in body:
             for text_node in node.find_all(nodes.TemplateData):
-                if '<' in text_node.data:
+                if "<" in text_node.data:
                     return True
         return False
 
     def _has_html_content_in_node(self, node):
         for text_node in node.find_all(nodes.TemplateData):
-            if '<' in text_node.data:
+            if "<" in text_node.data:
                 return True
         return False
 
@@ -35,15 +36,21 @@ class TemplateAnnotationExtension(Extension):
         for node in body:
             if isinstance(node, nodes.Block):
                 if self._has_html_content_in_node(node):
-                    block_start = nodes.Output([
-                        nodes.TemplateData(f"<!-- BLOCK: {node.name}, TEMPLATE: {template_filename} -->\n")
-                    ]).set_lineno(node.lineno)
+                    block_start = nodes.Output(
+                        [
+                            nodes.TemplateData(
+                                f"<!-- BLOCK: {node.name}, TEMPLATE: {template_filename} -->\n"
+                            )
+                        ]
+                    ).set_lineno(node.lineno)
 
-                    block_end = nodes.Output([
-                        nodes.TemplateData(f"\n<!-- END BLOCK: {node.name} -->")
-                    ]).set_lineno(node.lineno)
+                    block_end = nodes.Output(
+                        [nodes.TemplateData(f"\n<!-- END BLOCK: {node.name} -->")]
+                    ).set_lineno(node.lineno)
 
-                    processed_body = self._wrap_blocks_with_annotations(node.body, template_filename)
+                    processed_body = self._wrap_blocks_with_annotations(
+                        node.body, template_filename
+                    )
                     node.body = [block_start] + processed_body + [block_end]
                     wrapped_body.append(node)
                 else:
@@ -51,9 +58,9 @@ class TemplateAnnotationExtension(Extension):
                     wrapped_body.append(node)
             else:
                 # For non-block nodes, recursively process any nested blocks
-                if hasattr(node, 'body') and isinstance(node.body, list):
+                if hasattr(node, "body") and isinstance(node.body, list):
                     node.body = self._wrap_blocks_with_annotations(node.body, template_filename)
-                elif hasattr(node, 'nodes') and isinstance(node.nodes, list):
+                elif hasattr(node, "nodes") and isinstance(node.nodes, list):
                     node.nodes = self._wrap_blocks_with_annotations(node.nodes, template_filename)
                 wrapped_body.append(node)
 
@@ -62,7 +69,7 @@ class TemplateAnnotationExtension(Extension):
     def parse(self, parser):
         lineno = next(parser.stream).lineno
         template_filename = parser.parse_expression()
-        body = parser.parse_statements(['name:endtemplate_debug'], drop_needle=True)
+        body = parser.parse_statements(["name:endtemplate_debug"], drop_needle=True)
 
         if not self._has_html_content_in_ast(body):
             return body
@@ -72,13 +79,13 @@ class TemplateAnnotationExtension(Extension):
         # Wrap blocks with annotations
         body = self._wrap_blocks_with_annotations(body, filename_value)
 
-        start_comment = nodes.Output([
-            nodes.TemplateData(f"<!-- TEMPLATE: {filename_value} -->\n")
-        ]).set_lineno(lineno)
+        start_comment = nodes.Output(
+            [nodes.TemplateData(f"<!-- TEMPLATE: {filename_value} -->\n")]
+        ).set_lineno(lineno)
 
-        end_comment = nodes.Output([
-            nodes.TemplateData(f"\n<!-- END TEMPLATE: {filename_value} -->")
-        ]).set_lineno(lineno)
+        end_comment = nodes.Output(
+            [nodes.TemplateData(f"\n<!-- END TEMPLATE: {filename_value} -->")]
+        ).set_lineno(lineno)
 
         return [start_comment] + body + [end_comment]
 

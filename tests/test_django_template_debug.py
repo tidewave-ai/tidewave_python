@@ -109,7 +109,7 @@ class TestTemplateDebugRender(TestCase):
             with self.subTest(name=name):
                 result = render_to_string(f"non_html/{name}")
 
-                with open(TEMPLATES_PATH / "non_html" / name, "r", encoding="utf-8") as f:
+                with open(TEMPLATES_PATH / "non_html" / name, encoding="utf-8") as f:
                     content = f.read()
 
                 self.assertNotIn("<!-- TEMPLATE:", result)

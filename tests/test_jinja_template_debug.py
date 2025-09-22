@@ -1,11 +1,9 @@
-import os
 from pathlib import Path
 from unittest import TestCase
 
 from jinja2 import Environment, FileSystemLoader
 
 from tidewave.jinja2 import Extension as TemplateAnnotationExtension
-
 
 TEMPLATES_PATH = Path(__file__).parent / "jinja2"
 
@@ -16,13 +14,12 @@ class TestJinjaTemplateDebug(TestCase):
     def setUp(self):
         """Set up test environment"""
         self.env = Environment(
-            loader=FileSystemLoader(str(TEMPLATES_PATH)),
-            extensions=[TemplateAnnotationExtension]
+            loader=FileSystemLoader(str(TEMPLATES_PATH)), extensions=[TemplateAnnotationExtension]
         )
 
     def test_base_template_renders_with_annotations(self):
         """Test that base template renders with debug comments"""
-        template = self.env.get_template('base.html')
+        template = self.env.get_template("base.html")
         result = template.render()
 
         expected = (
@@ -36,12 +33,11 @@ class TestJinjaTemplateDebug(TestCase):
             "<!-- END TEMPLATE: tests/jinja2/base.html -->"
         )
 
-
         self.assertEqual(result, expected)
 
     def test_child_template_renders_with_annotations(self):
         """Test that child template renders with debug comments"""
-        template = self.env.get_template('child.html')
+        template = self.env.get_template("child.html")
         result = template.render()
 
         expected = (
@@ -73,7 +69,7 @@ class TestJinjaTemplateDebug(TestCase):
 
     def test_plain_text_template_not_annotated(self):
         """Test that plain text templates (without HTML tags) are not annotated"""
-        template = self.env.get_template('plain.txt')
+        template = self.env.get_template("plain.txt")
         result = template.render(message="Test message")
 
         expected = (
@@ -90,7 +86,7 @@ class TestJinjaTemplateDebug(TestCase):
 
     def test_grandchild_template_inheritance(self):
         """Test that grandchild template properly shows full inheritance chain"""
-        template = self.env.get_template('grandchild.html')
+        template = self.env.get_template("grandchild.html")
         result = template.render()
 
         expected = (
@@ -110,7 +106,7 @@ class TestJinjaTemplateDebug(TestCase):
 
     def test_child_template_with_includes(self):
         """Test that child template properly wraps included templates"""
-        template = self.env.get_template('child-includes.html')
+        template = self.env.get_template("child-includes.html")
         result = template.render(value="foo")
 
         expected = (

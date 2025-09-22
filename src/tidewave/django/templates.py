@@ -8,7 +8,6 @@ from django.template.base import mark_safe
 from django.template.loader_tags import BlockNode, ExtendsNode
 from django.utils.safestring import SafeString
 
-
 logger = logging.getLogger(__name__)
 
 
