@@ -14,33 +14,8 @@ from tidewave.django.templates import (
 )
 
 TEMPLATES_PATH = Path(__file__).parent / "templates"
-TEST_SETTINGS = {
-    "DATABASES": {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": ":memory:",
-        }
-    },
-    "TEMPLATES": [
-        {
-            "BACKEND": "django.template.backends.django.DjangoTemplates",
-            "DIRS": [str(TEMPLATES_PATH)],
-            "APP_DIRS": True,
-            "OPTIONS": {
-                "context_processors": [
-                    "django.template.context_processors.debug",
-                    "django.template.context_processors.request",
-                ],
-            },
-        },
-    ],
-    "TIDEWAVE": {
-        "allow_remote_access": False,
-    },
-}
 
 
-@override_settings(**TEST_SETTINGS)
 class TestTemplateDebugRender(TestCase):
     """Test Django template debug rendering functionality"""
 

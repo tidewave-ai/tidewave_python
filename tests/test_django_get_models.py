@@ -6,29 +6,10 @@ import re
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-import django
-from django.conf import settings
 from django.test import TestCase
 
 from tidewave.django.tools import get_models
 from tidewave.django.tools.models import _get_relative_source_location
-
-if not settings.configured:
-    settings.configure(
-        DATABASES={
-            "default": {
-                "ENGINE": "django.db.backends.sqlite3",
-                "NAME": ":memory:",
-            }
-        },
-        INSTALLED_APPS=[
-            "django.contrib.contenttypes",
-            "django.contrib.auth",
-        ],
-        SECRET_KEY="test-secret-key",
-        USE_TZ=True,
-    )
-    django.setup()
 
 
 class TestDjangoGetModels(TestCase):

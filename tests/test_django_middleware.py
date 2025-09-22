@@ -5,23 +5,8 @@ Basic tests for Django middleware
 import unittest
 from unittest.mock import Mock
 
-import django
-from django.conf import settings
 from django.http import HttpResponse
 from django.test import RequestFactory, override_settings
-
-# Configure Django settings for testing
-if not settings.configured:
-    settings.configure(
-        DEBUG=True,
-        SECRET_KEY="test-secret-key",
-        ALLOWED_HOSTS=[],
-        USE_TZ=True,
-        TIDEWAVE={
-            "allow_remote_access": False,
-        },
-    )
-    django.setup()
 
 from tidewave.django import Middleware
 
