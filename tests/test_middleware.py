@@ -9,7 +9,7 @@ from io import BytesIO
 from unittest.mock import Mock, patch
 
 from tidewave.mcp_handler import MCPHandler
-from tidewave.middleware import Middleware
+from tidewave.middleware import Middleware, modify_csp
 from tidewave.tools import project_eval
 
 
@@ -699,43 +699,148 @@ class TestExecuteCommand(TestMiddlewareBase):
         self.assertEqual(output_data, b"windows output")
 
 
-class TestHeaderRemoval(TestMiddlewareBase):
-    """Test header removal functionality"""
-
+class TestModifyCSP(unittest.TestCase):
     def setUp(self):
-        """Set up test fixtures with headers in downstream app"""
-        super().setUp()
+        self.client_url = "https://tidewave.ai/client.js"
 
-        # Mock downstream app that returns CSP and X-Frame-Options headers
-        def downstream_app_with_headers(environ, start_response):
-            headers = [
-                ("X-Frame-Options", "DENY"),
-                ("Content-Type", "text/html"),
-            ]
-            start_response("200 OK", headers)
-            return [b"App with headers"]
+    def test_empty_csp(self):
+        """Test with empty CSP value"""
+        result = modify_csp("", self.client_url)
+        self.assertIn("script-src 'unsafe-eval'", result)
+        self.assertIn(f"frame-src {self.client_url}", result)
 
-        self.demo_app = downstream_app_with_headers
-        self.middleware = self._create_middleware(self.config)
+    def test_whitespace_only_csp(self):
+        """Test with whitespace-only CSP value"""
+        result = modify_csp("   ", self.client_url)
+        self.assertIn("script-src 'unsafe-eval'", result)
+        self.assertIn(f"frame-src {self.client_url}", result)
 
-    def test_removes_csp_and_xframe_headers(self):
-        """Test iframe blocking headers are removed from all responses"""
-        environ = self._create_environ("/some-route")
+    def test_adds_unsafe_eval_to_existing_script_src(self):
+        """Test adding unsafe-eval to existing script-src"""
+        csp = "script-src 'self' https://cdn.example.com; style-src 'self'"
+        result = modify_csp(csp, self.client_url)
 
-        result = self.middleware(environ, self.start_response)
+        self.assertIn("script-src 'self' https://cdn.example.com 'unsafe-eval'", result)
+        self.assertIn(f"frame-src {self.client_url}", result)
+        self.assertIn("style-src 'self'", result)
 
-        # Check that start_response was called
-        self.start_response.assert_called_once()
-        call_args = self.start_response.call_args[0]
+    def test_preserves_existing_unsafe_eval(self):
+        """Test that unsafe-eval is not duplicated if already present"""
+        csp = "script-src 'self' 'unsafe-eval'; style-src 'self'"
+        result = modify_csp(csp, self.client_url)
 
-        # Check status
-        self.assertIn("200", call_args[0])
+        # Should not add another unsafe-eval
+        self.assertEqual(result.count("'unsafe-eval'"), 1)
+        self.assertIn("script-src 'self' 'unsafe-eval'", result)
 
-        # Check headers - X-Frame-Options should be removed
-        headers = dict(call_args[1])
-        self.assertNotIn("X-Frame-Options", headers)
-        # Other headers should remain
-        self.assertIn("Content-Type", headers)
+    def test_adds_frame_src_to_existing_policy(self):
+        """Test adding frame-src when it doesn't exist"""
+        csp = "script-src 'self'; style-src 'self'"
+        result = modify_csp(csp, self.client_url)
 
-        # Check response body
-        self.assertEqual(b"".join(result), b"App with headers")
+        self.assertIn(f"frame-src {self.client_url}", result)
+        self.assertIn("script-src 'self' 'unsafe-eval'", result)
+        self.assertIn("style-src 'self'", result)
+
+    def test_adds_client_url_to_existing_frame_src(self):
+        """Test adding client URL to existing frame-src"""
+        csp = "script-src 'self'; frame-src 'self' https://trusted.example.com"
+        result = modify_csp(csp, self.client_url)
+
+        self.assertIn(f"frame-src 'self' https://trusted.example.com {self.client_url}", result)
+        self.assertIn("script-src 'self' 'unsafe-eval'", result)
+
+    def test_preserves_existing_client_url_in_frame_src(self):
+        """Test that client URL is not duplicated if already in frame-src"""
+        csp = f"script-src 'self'; frame-src 'self' {self.client_url}"
+        result = modify_csp(csp, self.client_url)
+
+        # Should not add duplicate client URL
+        self.assertEqual(result.count(self.client_url), 1)
+        self.assertIn(f"frame-src 'self' {self.client_url}", result)
+
+    def test_handles_directives_without_sources(self):
+        """Test handling of directives without sources like upgrade-insecure-requests"""
+        csp = "upgrade-insecure-requests; script-src 'self'; block-all-mixed-content"
+        result = modify_csp(csp, self.client_url)
+
+        self.assertIn("upgrade-insecure-requests", result)
+        self.assertIn("block-all-mixed-content", result)
+        self.assertIn("script-src 'self' 'unsafe-eval'", result)
+        self.assertIn(f"frame-src {self.client_url}", result)
+
+    def test_case_insensitive_directive_handling(self):
+        """Test that directive names are handled case-insensitively"""
+        csp = "SCRIPT-SRC 'self'; Frame-Src 'none'"
+        result = modify_csp(csp, self.client_url)
+
+        # Should modify both directives despite case differences
+        self.assertIn("'unsafe-eval'", result)
+        self.assertIn(self.client_url, result)
+
+    def test_handles_extra_whitespace(self):
+        """Test handling of extra whitespace in CSP"""
+        csp = (
+            "  script-src   'self'  https://cdn.example.com  ;"
+            "  style-src  'self'  ; "
+            "  frame-src  'self'  ;"
+        )
+        result = modify_csp(csp, self.client_url)
+
+        self.assertIn("script-src 'self' https://cdn.example.com 'unsafe-eval'", result)
+        self.assertIn("style-src 'self'", result)
+        self.assertIn(f"frame-src 'self' {self.client_url}", result)
+
+    def test_handles_empty_semicolons(self):
+        """Test handling of empty sections between semicolons"""
+        csp = "script-src 'self';;; style-src 'self';;"
+        result = modify_csp(csp, self.client_url)
+
+        self.assertIn("script-src 'self' 'unsafe-eval'", result)
+        self.assertIn("style-src 'self'", result)
+        self.assertIn(f"frame-src {self.client_url}", result)
+
+    def test_real_world_csp(self):
+        """Test with a complex, real-world-like CSP"""
+        csp = (
+            "default-src 'none'; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; "
+            "img-src 'self' data: https:; "
+            "connect-src 'self' https://api.example.com; "
+            "frame-ancestors 'none'; "
+            "base-uri 'self'; "
+            "form-action 'self'"
+        )
+
+        result = modify_csp(csp, self.client_url)
+
+        # Check that unsafe-eval was added to script-src
+        self.assertIn("'unsafe-eval'", result)
+        self.assertIn(
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net 'unsafe-eval'",
+            result,
+        )
+
+        # Check that frame-src was added
+        self.assertIn(f"frame-src {self.client_url}", result)
+
+        # Check that all other directives are preserved
+        self.assertIn("default-src 'none'", result)
+        self.assertIn("style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", result)
+        self.assertIn("font-src 'self' https://fonts.gstatic.com", result)
+        self.assertIn("img-src 'self' data: https:", result)
+        self.assertIn("connect-src 'self' https://api.example.com", result)
+        self.assertIn("frame-ancestors 'none'", result)
+        self.assertIn("base-uri 'self'", result)
+        self.assertIn("form-action 'self'", result)
+
+    def test_url_as_substring_handling(self):
+        """Test handling when client URL appears as substring of another URL"""
+        longer_url = f"{self.client_url}/some/path"
+        csp = f"frame-src 'self' {longer_url}"
+        result = modify_csp(csp, self.client_url)
+
+        # Should not add client URL if it would be redundant with longer URL.
+        self.assertIn(longer_url, result)
