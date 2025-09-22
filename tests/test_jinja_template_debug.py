@@ -165,6 +165,26 @@ class TestJinjaTemplateDebug(TestCase):
         self.assertNotIn("<!-- TEMPLATE:", result)
         self.assertNotIn("<!-- END TEMPLATE:", result)
 
+    def test_grandchild_template_inheritance(self):
+        """Test that grandchild template properly shows full inheritance chain"""
+        template = self.env.get_template('grandchild.html')
+        result = template.render()
+
+        expected = (
+            "<!-- TEMPLATE: tests/jinja2/grandchild.html -->\n"
+            "<!-- TEMPLATE: tests/jinja2/child.html -->\n"
+            "<!-- TEMPLATE: tests/jinja2/base.html -->\n"
+            "<!-- BLOCK: content, TEMPLATE: tests/jinja2/base.html -->\n"
+            "\n"
+            "<p>Grandchild content</p>\n"
+            "\n"
+            "<!-- END BLOCK: content -->\n"
+            "\n"
+            "<!-- END TEMPLATE: tests/jinja2/base.html -->"
+        )
+
+        self.assertEqual(result, expected)
+
     def test_child_template_with_includes(self):
         """Test that child template properly wraps included templates"""
         template = self.env.get_template('child-includes.html')
