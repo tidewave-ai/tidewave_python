@@ -100,7 +100,7 @@ def get_template_path(template_or_block) -> Optional[str]:
         except ValueError:
             pass
 
-    return template_path
+    return str(template_path)
 
 
 def get_extends_parents(template) -> list[str]:
