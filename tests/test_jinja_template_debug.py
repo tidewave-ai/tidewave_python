@@ -42,13 +42,13 @@ class TemplateAnnotationExtension(Extension):
                         nodes.TemplateData(f"<!-- BLOCK: {node.name}, TEMPLATE: {template_filename} -->\n")
                     ]).set_lineno(node.lineno)
 
-                    node.body = self._wrap_blocks_with_annotations(node.body, template_filename)
-
                     block_end = nodes.Output([
                         nodes.TemplateData(f"\n<!-- END BLOCK: {node.name} -->")
                     ]).set_lineno(node.lineno)
 
-                    wrapped_body.extend([block_start, node, block_end])
+                    processed_body = self._wrap_blocks_with_annotations(node.body, template_filename)
+                    node.body = [block_start] + processed_body + [block_end]
+                    wrapped_body.append(node)
                 else:
                     node.body = self._wrap_blocks_with_annotations(node.body, template_filename)
                     wrapped_body.append(node)
@@ -126,10 +126,12 @@ class TestJinjaTemplateDebug(TestCase):
         expected = (
             "<!-- TEMPLATE: tests/jinja2/child.html -->\n"
             "<!-- TEMPLATE: tests/jinja2/base.html -->\n"
-            "<!-- BLOCK: content, TEMPLATE: tests/jinja2/base.html -->\n"
-            " \n"
+            "<!-- BLOCK: content, TEMPLATE: tests/jinja2/child.html -->\n"
+            " <!-- BLOCK: content, TEMPLATE: tests/jinja2/base.html -->\n"
+            "\n"
             "<p>Base content</p>\n"
             "\n"
+            "<!-- END BLOCK: content -->\n"
             "<p>Child content</p>\n"
             "\n"
             "<!-- END BLOCK: content -->\n"
@@ -174,7 +176,7 @@ class TestJinjaTemplateDebug(TestCase):
             "<!-- TEMPLATE: tests/jinja2/grandchild.html -->\n"
             "<!-- TEMPLATE: tests/jinja2/child.html -->\n"
             "<!-- TEMPLATE: tests/jinja2/base.html -->\n"
-            "<!-- BLOCK: content, TEMPLATE: tests/jinja2/base.html -->\n"
+            "<!-- BLOCK: content, TEMPLATE: tests/jinja2/grandchild.html -->\n"
             "\n"
             "<p>Grandchild content</p>\n"
             "\n"
@@ -193,7 +195,7 @@ class TestJinjaTemplateDebug(TestCase):
         expected = (
             "<!-- TEMPLATE: tests/jinja2/child-includes.html -->\n"
             "<!-- TEMPLATE: tests/jinja2/base.html -->\n"
-            "<!-- BLOCK: content, TEMPLATE: tests/jinja2/base.html -->\n"
+            "<!-- BLOCK: content, TEMPLATE: tests/jinja2/child-includes.html -->\n"
             "\n"
             "<p>Child content</p>\n"
             "<!-- TEMPLATE: tests/jinja2/include.html -->\n"
