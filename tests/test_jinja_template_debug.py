@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from unittest import TestCase
 
@@ -11,37 +12,40 @@ class TemplateAnnotationExtension(Extension):
     tags = {'template_debug'}
 
     def preprocess(self, source, name, filename=None):
-        """Preprocess template source to inject template_debug tags"""
-        # Only inject for named templates and if they contain HTML
-        if name and self._source_has_html_content(source):
-            # Wrap the source with our custom tags
-            return f"{{% template_debug '{name}' %}}{source}{{% endtemplate_debug %}}"
+        """Preprocess template source to inject filename"""
+
+        if filename:
+            relative_filename = os.path.relpath(filename)
+            return f"{{% template_debug '{relative_filename}' %}}{source}{{% endtemplate_debug %}}"
         return source
 
-    def _source_has_html_content(self, source):
-        """Check if source contains HTML tags"""
-        return '<' in source and '>' in source
+    def _has_html_content_in_ast(self, body):
+        """Check if AST body contains HTML tags by analyzing text nodes"""
+        for node in body:
+            for text_node in node.find_all(nodes.TemplateData):
+                if '<' in text_node.data:
+                    return True
+        return False
 
     def parse(self, parser):
         """Parse the template_debug tag"""
         lineno = next(parser.stream).lineno
-
-        # Parse the template name
-        template_name = parser.parse_expression()
-
-        # Parse the body until endtemplate_debug
+        template_filename = parser.parse_expression()
         body = parser.parse_statements(['name:endtemplate_debug'], drop_needle=True)
 
-        # Create start and end comment nodes
+        if not self._has_html_content_in_ast(body):
+            return body
+
+        filename_value = template_filename.as_const()
+
         start_comment = nodes.Output([
-            nodes.TemplateData(f"<!-- TEMPLATE: {template_name.value.strip('\"')} -->\n")
+            nodes.TemplateData(f"<!-- TEMPLATE: {filename_value} -->\n")
         ]).set_lineno(lineno)
 
         end_comment = nodes.Output([
-            nodes.TemplateData(f"\n<!-- END TEMPLATE: {template_name.value.strip('\"')} -->")
+            nodes.TemplateData(f"\n<!-- END TEMPLATE: {filename_value} -->")
         ]).set_lineno(lineno)
 
-        # Return the wrapped content
         return [start_comment] + body + [end_comment]
 
 
@@ -64,12 +68,12 @@ class TestJinjaTemplateDebug(TestCase):
         result = template.render()
 
         expected = (
-            "<!-- TEMPLATE: base.html -->\n"
+            "<!-- TEMPLATE: tests/jinja2/base.html -->\n"
             "\n"
             "<p>Base content</p>\n"
             "\n"
             "\n"
-            "<!-- END TEMPLATE: base.html -->"
+            "<!-- END TEMPLATE: tests/jinja2/base.html -->"
         )
 
 
@@ -81,15 +85,15 @@ class TestJinjaTemplateDebug(TestCase):
         result = template.render()
 
         expected = (
-            "<!-- TEMPLATE: child.html -->\n"
-            "<!-- TEMPLATE: base.html -->\n"
+            "<!-- TEMPLATE: tests/jinja2/child.html -->\n"
+            "<!-- TEMPLATE: tests/jinja2/base.html -->\n"
             " \n"
             "<p>Base content</p>\n"
             "\n"
             "<p>Child content</p>\n"
             "\n"
             "\n"
-            "<!-- END TEMPLATE: base.html -->"
+            "<!-- END TEMPLATE: tests/jinja2/base.html -->"
         )
 
         self.assertEqual(result, expected)
