@@ -26,9 +26,10 @@ class Middleware(MiddlewareMixin):
     DEBUG settings.
 
     Usage:
-        # After MIDDLEWARE= definition
+        # After MIDDLEWARE= and INSTALLED_APPS= definition
         if DEBUG:
-          MIDDLEWARE.insert(0, 'tidewave.django.Middleware')
+            INSTALLED_APPS.insert(0, "tidewave.django.apps.TidewaveConfig")
+            MIDDLEWARE.insert(0, 'tidewave.django.Middleware')
 
     Configuration:
         - ALLOWED_HOSTS: Used as allowed origins
