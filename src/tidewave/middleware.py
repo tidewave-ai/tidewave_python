@@ -92,17 +92,7 @@ class Middleware:
             else:
                 return self._send_error_response(start_response, HTTPStatus.METHOD_NOT_ALLOWED)
 
-        # Call the downstream app and modify headers
-        def capture_start_response(status, headers, exc_info=None):
-            # Remove X-Frame-Options headers to allow embedding the app in Tidewave
-            filtered_headers = [
-                (name, value)
-                for name, value in headers
-                if name.lower() not in ("x-frame-options")
-            ]
-            return start_response(status, filtered_headers, exc_info)
-
-        return self.app(environ, capture_start_response)
+        return self.app(environ, start_response)
 
     def _handle_home_route(self, start_response: Callable) -> Iterator[bytes]:
         client_config = self._get_config_data()
@@ -358,3 +348,59 @@ class Middleware:
             error_json = json.dumps({"status": 213}).encode("utf-8")
             chunk = struct.pack("!BL", 1, len(error_json)) + error_json
             yield chunk
+
+
+def modify_csp(csp_value: str, client_url: str) -> str:
+    """
+    Modify CSP header to support Tidewave embedding:
+    - Add 'unsafe-eval' to script-src if not present
+    - Allow Tidewave client URL in frame-src
+
+    Args:
+        csp_value: Original CSP header value
+        client_url: Tidewave client URL to allow in frame-src
+
+    Returns:
+        Modified CSP header value
+
+    """
+    directives = {}
+    parts = [part.strip() for part in csp_value.split(";") if part.strip()]
+
+    for part in parts:
+        if " " in part:
+            directive, sources = part.split(" ", 1)
+            directives[directive.lower()] = sources.strip()
+        else:
+            # Directive with no sources (like 'upgrade-insecure-requests')
+            directives[part.lower()] = ""
+
+    # Modify script-src to include unsafe-eval.
+    script_src = directives.get("script-src", "")
+    if script_src:
+        script_sources = script_src.split()
+        if "'unsafe-eval'" not in script_sources:
+            directives["script-src"] = f"{' '.join(script_sources)} 'unsafe-eval'"
+    elif not script_src:
+        # No script-src directive, add one with unsafe-eval.
+        directives["script-src"] = "'unsafe-eval'"
+
+    # Modify frame-src to allow Tidewave client.
+    frame_src = directives.get("frame-src", "")
+    if frame_src:
+        frame_sources = frame_src.split()
+        if client_url not in frame_sources:
+            directives["frame-src"] = f"{' '.join(frame_sources)} {client_url}"
+    else:
+        # No frame-src directive, add one.
+        directives["frame-src"] = client_url
+
+    # Rebuild CSP header
+    csp_parts = []
+    for directive, sources in directives.items():
+        if sources:
+            csp_parts.append(f"{directive} {sources}")
+        else:
+            csp_parts.append(directive)
+
+    return "; ".join(csp_parts)
