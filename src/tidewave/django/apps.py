@@ -17,17 +17,16 @@ class TidewaveConfig(AppConfig):
             return
 
         # Only patch if not already patched
-        if not getattr(Template, "_tidewave_patched", False):
+        if not hasattr(Template, "_tidewave_original_render"):
             self.patch_template_render()
 
     def patch_template_render(self):
         """Monkey patch Template.render to add debug HTML comments."""
-        Template._original_render = Template.render
-        BlockNode._original_render = BlockNode.render
+        Template._tidewave_original_render = Template.render
+        BlockNode._tidewave_original_render = BlockNode.render
 
         # Patch Template.render
         Template.render = debug_render
-        Template._tidewave_patched = True
 
         # Patch BlockNode.render
         BlockNode.render = debug_block_render

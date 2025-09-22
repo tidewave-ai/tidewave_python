@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import Optional
 
@@ -5,79 +6,93 @@ from django.conf import settings
 from django.template import Template
 from django.template.base import mark_safe
 from django.template.loader_tags import BlockNode, ExtendsNode
+from django.utils.safestring import SafeString
+
+
+logger = logging.getLogger(__name__)
 
 
 def debug_render(self, context) -> str:
-    content = Template._original_render(self, context)
+    content = Template._tidewave_original_render(self, context)
 
-    # Only add debug comments for HTML content
-    if not content.lstrip().startswith("<"):
+    try:
+        # Only add debug comments for HTML content
+        if not content.lstrip().startswith("<"):
+            return content
+
+        template_path = get_template_path(self)
+
+        if not template_path:
+            return content
+
+        extends_parents = get_extends_parents(self)
+
+        extends_info = "".join(f", EXTENDS: {p}" for p in extends_parents)
+        start_comment = f"<!-- TEMPLATE: {template_path}{extends_info} -->"
+        end_comment = f"<!-- END TEMPLATE: {template_path} -->"
+
+        return wrap_rendered(content, start_comment, end_comment)
+    except Exception as e:
+        logger.warning(
+            f"Tidewave failed to annotate template, please open up an issue on https://github.com/tidewave-ai/tidewave_python.\nException: {e}"
+        )
         return content
-
-    # Find template name
-    template_name = None
-    if hasattr(self, "origin") and self.origin:
-        if hasattr(self.origin, "template_name"):
-            template_name = self.origin.template_name
-        elif hasattr(self.origin, "name"):
-            template_name = self.origin.name
-    elif hasattr(self, "name") and self.name:
-        template_name = self.name
-
-    if not template_name:
-        return content
-
-    display_name = clean_template_path(template_name)
-
-    # Gather inheritance chain info
-    inheritance_chain = recurse_inheritance_chain(self, context)
-
-    extends_info = "".join(f", EXTENDS: {n}" for n in inheritance_chain[1:])
-    start_comment = f"<!-- TEMPLATE: {display_name}{extends_info} -->"
-    end_comment = f"<!-- END TEMPLATE: {display_name} -->"
-
-    return f"{start_comment}{content}{end_comment}"
 
 
 def debug_block_render(self, context) -> str:
-    content = BlockNode._original_render(self, context)
+    content = BlockNode._tidewave_original_render(self, context)
 
-    # Only add debug comments for HTML content
-    if not content.lstrip().startswith("<"):
+    try:
+        # Only add debug comments for HTML content
+        if not content.lstrip().startswith("<"):
+            return content
+
+        # Gather extra info about the block inheritance.
+        block_context = context.render_context.get("block_context")
+
+        template_path = None
+
+        # Get template name from the block context if available.
+        if block_context:
+            blocks = block_context.blocks.get(self.name, [])
+            block = blocks[-1] if blocks else None
+            if block:
+                template_path = get_template_path(block)
+
+        # Fallback to context's template if available, this happens when there's no inheritance.
+        if not template_path and context.template:
+            template_path = get_template_path(context.template)
+
+        if not template_path:
+            return content
+
+        start_comment = f"<!-- BLOCK: {self.name}, TEMPLATE: {template_path} -->"
+        end_comment = f"<!-- END BLOCK: {self.name} -->"
+
+        return wrap_rendered(content, start_comment, end_comment)
+    except Exception as e:
+        logger.warning(
+            f"Tidewave failed to annotate block, please open up an issue on https://github.com/tidewave-ai/tidewave_python.\nException: {e}"
+        )
         return content
 
-    # Gather extra info about the block inheritance.
-    block_context = context.render_context.get("block_context")
 
-    template_name = None
+def wrap_rendered(content, prefix, suffix):
+    new_content = f"{prefix}{content}{suffix}"
 
-    # Get template name from the block context if available.
-    if block_context and hasattr(block_context, "blocks"):
-        blocks = block_context.blocks.get(self.name, [])
-        block = blocks[-1] if blocks else None
-        if hasattr(block, "origin") and block.origin and hasattr(block.origin, "name"):
-            template_name = clean_template_path(block.origin.name)
-
-    # Fallback to context's template if available, this happens when there's no inheritance.
-    if not template_name:
-        template = getattr(context, "template", None)
-        if template and hasattr(template, "origin") and template.origin:
-            template_name = clean_template_path(template.origin.name)
-
-    start_comment = f"<!-- START BLOCK: {self.name}, TEMPLATE: {template_name or '<unknown>'} -->"
-    end_comment = f"<!-- END BLOCK: {self.name} -->"
-
-    return mark_safe(f"{start_comment}{content}{end_comment}")
+    if isinstance(content, SafeString):
+        return mark_safe(new_content)
+    else:
+        return new_content
 
 
-def clean_template_path(template_name) -> Optional[str]:
+def get_template_path(template_or_block) -> Optional[str]:
     """Clean up template path for display."""
-    if not template_name:
-        return
+
+    template_path = template_or_block.origin.name
 
     # If it's an absolute path, make it relative to BASE_DIR.
-    # Force to string in case it's a SafeString.
-    template_path = Path("".join(c for c in str(template_name)))
+    template_path = Path(template_path)
     if template_path.is_absolute() and hasattr(settings, "BASE_DIR"):
         try:
             base_dir = Path(settings.BASE_DIR)
@@ -85,12 +100,10 @@ def clean_template_path(template_name) -> Optional[str]:
         except ValueError:
             pass
 
-    return str(template_path)
+    return template_path
 
 
-def recurse_inheritance_chain(template, context) -> list[str]:
-    chain = [template.name if template.name else "<unknown>"]
-
+def get_extends_parents(template) -> list[str]:
     extends_node = None
     for node in template.nodelist:
         if isinstance(node, ExtendsNode):
@@ -98,23 +111,18 @@ def recurse_inheritance_chain(template, context) -> list[str]:
             break
 
     if not extends_node:
-        return chain
+        return []
 
-    try:
-        if hasattr(extends_node, "parent_template") and extends_node.parent_template:
-            parent_template = extends_node.parent_template
-        else:
-            if hasattr(extends_node.parent_name, "var"):
-                parent_name = extends_node.parent_name.var
-            else:
-                parent_name = str(extends_node.parent_name)
-            parent_template = template.engine.get_template(parent_name)
+    if hasattr(extends_node.parent_name, "var"):
+        parent_name = extends_node.parent_name.var
+    else:
+        parent_name = str(extends_node.parent_name)
+    parent_template = template.engine.get_template(parent_name)
 
-        # Recursively get the parent's chain
-        parent_chain = recurse_inheritance_chain(parent_template, context)
-        chain.extend(parent_chain)
+    parent_template_path = get_template_path(parent_template)
 
-    except Exception as e:
-        chain.append(f"<unknown: {e}>")
+    if not parent_template_path:
+        return []
 
-    return chain
+    # Recursively get the parent's chain
+    return [parent_template_path] + get_extends_parents(parent_template)
