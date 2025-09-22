@@ -1,38 +1,48 @@
 from pathlib import Path
 from unittest import TestCase
 
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, nodes
 from jinja2.ext import Extension
-from jinja2.lexer import Token
 
 
 class TemplateAnnotationExtension(Extension):
-    """Jinja2 extension that adds HTML comments around templates"""
+    """Jinja2 extension that adds HTML comments around templates using AST manipulation"""
 
-    def filter_stream(self, stream):
-        """Filter token stream to add template annotations"""
-        # Get template name from the stream
-        template_name = getattr(stream, 'name', None)
+    tags = {'template_debug'}
 
-        # Only annotate named templates (not inline strings)
-        if template_name:
-            # Create start annotation token
-            start_comment = f"<!-- TEMPLATE: {template_name} -->\n"
-            yield Token(1, 'data', start_comment)
+    def preprocess(self, source, name, filename=None):
+        """Preprocess template source to inject template_debug tags"""
+        # Only inject for named templates and if they contain HTML
+        if name and self._source_has_html_content(source):
+            # Wrap the source with our custom tags
+            return f"{{% template_debug '{name}' %}}{source}{{% endtemplate_debug %}}"
+        return source
 
-            # Yield all original tokens
-            last_lineno = 1
-            for token in stream:
-                yield token
-                last_lineno = token.lineno
+    def _source_has_html_content(self, source):
+        """Check if source contains HTML tags"""
+        return '<' in source and '>' in source
 
-            # Create end annotation token
-            end_comment = f"\n\n<!-- END TEMPLATE: {template_name} -->"
-            yield Token(last_lineno, 'data', end_comment)
-        else:
-            # For unnamed templates, just pass through all tokens
-            for token in stream:
-                yield token
+    def parse(self, parser):
+        """Parse the template_debug tag"""
+        lineno = next(parser.stream).lineno
+
+        # Parse the template name
+        template_name = parser.parse_expression()
+
+        # Parse the body until endtemplate_debug
+        body = parser.parse_statements(['name:endtemplate_debug'], drop_needle=True)
+
+        # Create start and end comment nodes
+        start_comment = nodes.Output([
+            nodes.TemplateData(f"<!-- TEMPLATE: {template_name.value.strip('\"')} -->\n")
+        ]).set_lineno(lineno)
+
+        end_comment = nodes.Output([
+            nodes.TemplateData(f"\n<!-- END TEMPLATE: {template_name.value.strip('\"')} -->")
+        ]).set_lineno(lineno)
+
+        # Return the wrapped content
+        return [start_comment] + body + [end_comment]
 
 
 TEMPLATES_PATH = Path(__file__).parent / "jinja2"
@@ -92,3 +102,20 @@ class TestJinjaTemplateDebug(TestCase):
 
         expected = "<p>Inline template content</p>"
         self.assertEqual(result, expected)
+
+    def test_plain_text_template_not_annotated(self):
+        """Test that plain text templates (without HTML tags) are not annotated"""
+        template = self.env.get_template('plain.txt')
+        result = template.render(message="Test message")
+
+        expected = (
+            "This is a plain text template.\n"
+            "It has no HTML tags.\n"
+            "Just some regular text content.\n"
+            "Test message"
+        )
+
+        # Should not contain any annotation comments
+        self.assertEqual(result, expected)
+        self.assertNotIn("<!-- TEMPLATE:", result)
+        self.assertNotIn("<!-- END TEMPLATE:", result)
