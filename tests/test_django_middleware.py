@@ -127,7 +127,9 @@ class TestDjangoMiddleware(unittest.TestCase):
 
         response = HttpResponse("Django response")
         response.headers["X-Frame-Options"] = "DENY"
-        response.headers["Content-Security-Policy"] = "default-src 'none'; script-src 'self'"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'none'; script-src 'self'; frame-ancestors 'none'"
+        )
 
         self.get_response.return_value = response
 
@@ -142,7 +144,7 @@ class TestDjangoMiddleware(unittest.TestCase):
         self.assertNotIn("X-Frame-Options", response.headers)
         # Test that CSP is modified to allow Tidewave client
         self.assertIn("script-src 'self' 'unsafe-eval'", csp_value)
-        self.assertIn("frame-src https://tidewave.ai", csp_value)
+        self.assertNotIn("frame-ancestors", csp_value)
         # Test that original directives are preserved
         self.assertIn("default-src 'none'", csp_value)
 

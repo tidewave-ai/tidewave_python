@@ -350,19 +350,17 @@ class Middleware:
             yield chunk
 
 
-def modify_csp(csp_value: str, client_url: str) -> str:
+def modify_csp(csp_value: str) -> str:
     """
     Modify CSP header to support Tidewave embedding:
     - Add 'unsafe-eval' to script-src if not present
-    - Allow Tidewave client URL in frame-src
+    - Remove frame-ancestors from CSP if present
 
     Args:
         csp_value: Original CSP header value
-        client_url: Tidewave client URL to allow in frame-src
 
     Returns:
         Modified CSP header value
-
     """
     directives = {}
     parts = [part.strip() for part in csp_value.split(";") if part.strip()]
@@ -385,22 +383,13 @@ def modify_csp(csp_value: str, client_url: str) -> str:
         # No script-src directive, add one with unsafe-eval.
         directives["script-src"] = "'unsafe-eval'"
 
-    # Modify frame-src to allow Tidewave client.
-    frame_src = directives.get("frame-src", "")
-    if frame_src:
-        frame_sources = frame_src.split()
-        if client_url not in frame_sources:
-            directives["frame-src"] = f"{' '.join(frame_sources)} {client_url}"
-    else:
-        # No frame-src directive, add one.
-        directives["frame-src"] = client_url
-
     # Rebuild CSP header
     csp_parts = []
     for directive, sources in directives.items():
-        if sources:
-            csp_parts.append(f"{directive} {sources}")
-        else:
-            csp_parts.append(directive)
+        if directive != "frame-ancestors":
+            if sources:
+                csp_parts.append(f"{directive} {sources}")
+            else:
+                csp_parts.append(directive)
 
     return "; ".join(csp_parts)

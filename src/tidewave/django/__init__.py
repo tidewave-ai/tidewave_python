@@ -179,7 +179,7 @@ class Middleware:
         Modify headers to allow embedding in Tidewave:
         - Remove X-Frame-Options
         - Add unsafe-eval to script-src in CSP if present
-        - Allow frame-src for Tidewave client
+        - Remove frame-ancestors from CSP if present
 
         """
 
@@ -188,9 +188,6 @@ class Middleware:
 
         csp_header = response.get("Content-Security-Policy")
         if csp_header:
-            response["Content-Security-Policy"] = modify_csp(
-                csp_header,
-                self.config.get("client_url", ""),
-            )
+            response["Content-Security-Policy"] = modify_csp(csp_header)
 
         return response

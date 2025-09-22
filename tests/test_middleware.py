@@ -705,100 +705,80 @@ class TestModifyCSP(unittest.TestCase):
 
     def test_empty_csp(self):
         """Test with empty CSP value"""
-        result = modify_csp("", self.client_url)
+        result = modify_csp("")
         self.assertIn("script-src 'unsafe-eval'", result)
-        self.assertIn(f"frame-src {self.client_url}", result)
+        self.assertNotIn("frame-ancestors", result)
 
     def test_whitespace_only_csp(self):
         """Test with whitespace-only CSP value"""
-        result = modify_csp("   ", self.client_url)
+        result = modify_csp("   ")
         self.assertIn("script-src 'unsafe-eval'", result)
-        self.assertIn(f"frame-src {self.client_url}", result)
+        self.assertNotIn("frame-ancestors", result)
 
     def test_adds_unsafe_eval_to_existing_script_src(self):
         """Test adding unsafe-eval to existing script-src"""
         csp = "script-src 'self' https://cdn.example.com; style-src 'self'"
-        result = modify_csp(csp, self.client_url)
+        result = modify_csp(csp)
 
         self.assertIn("script-src 'self' https://cdn.example.com 'unsafe-eval'", result)
-        self.assertIn(f"frame-src {self.client_url}", result)
         self.assertIn("style-src 'self'", result)
 
     def test_preserves_existing_unsafe_eval(self):
         """Test that unsafe-eval is not duplicated if already present"""
         csp = "script-src 'self' 'unsafe-eval'; style-src 'self'"
-        result = modify_csp(csp, self.client_url)
+        result = modify_csp(csp)
 
         # Should not add another unsafe-eval
         self.assertEqual(result.count("'unsafe-eval'"), 1)
         self.assertIn("script-src 'self' 'unsafe-eval'", result)
 
-    def test_adds_frame_src_to_existing_policy(self):
+    def test_removes_frame_ancestors_from_existing_policy(self):
         """Test adding frame-src when it doesn't exist"""
-        csp = "script-src 'self'; style-src 'self'"
-        result = modify_csp(csp, self.client_url)
+        csp = "script-src 'self'; style-src 'self'; frame-ancestors 'self'"
+        result = modify_csp(csp)
 
-        self.assertIn(f"frame-src {self.client_url}", result)
         self.assertIn("script-src 'self' 'unsafe-eval'", result)
         self.assertIn("style-src 'self'", result)
-
-    def test_adds_client_url_to_existing_frame_src(self):
-        """Test adding client URL to existing frame-src"""
-        csp = "script-src 'self'; frame-src 'self' https://trusted.example.com"
-        result = modify_csp(csp, self.client_url)
-
-        self.assertIn(f"frame-src 'self' https://trusted.example.com {self.client_url}", result)
-        self.assertIn("script-src 'self' 'unsafe-eval'", result)
-
-    def test_preserves_existing_client_url_in_frame_src(self):
-        """Test that client URL is not duplicated if already in frame-src"""
-        csp = f"script-src 'self'; frame-src 'self' {self.client_url}"
-        result = modify_csp(csp, self.client_url)
-
-        # Should not add duplicate client URL
-        self.assertEqual(result.count(self.client_url), 1)
-        self.assertIn(f"frame-src 'self' {self.client_url}", result)
+        self.assertNotIn("frame-ancestors", result)
 
     def test_handles_directives_without_sources(self):
         """Test handling of directives without sources like upgrade-insecure-requests"""
         csp = "upgrade-insecure-requests; script-src 'self'; block-all-mixed-content"
-        result = modify_csp(csp, self.client_url)
+        result = modify_csp(csp)
 
         self.assertIn("upgrade-insecure-requests", result)
         self.assertIn("block-all-mixed-content", result)
         self.assertIn("script-src 'self' 'unsafe-eval'", result)
-        self.assertIn(f"frame-src {self.client_url}", result)
 
     def test_case_insensitive_directive_handling(self):
         """Test that directive names are handled case-insensitively"""
-        csp = "SCRIPT-SRC 'self'; Frame-Src 'none'"
-        result = modify_csp(csp, self.client_url)
+        csp = "SCRIPT-SRC 'self'; Frame-Ancestors 'none'"
+        result = modify_csp(csp)
 
         # Should modify both directives despite case differences
         self.assertIn("'unsafe-eval'", result)
-        self.assertIn(self.client_url, result)
+        self.assertNotIn("frame-ancestors", result)
 
     def test_handles_extra_whitespace(self):
         """Test handling of extra whitespace in CSP"""
         csp = (
             "  script-src   'self'  https://cdn.example.com  ;"
             "  style-src  'self'  ; "
-            "  frame-src  'self'  ;"
+            "  frame-ancestors  'self'  ;"
         )
-        result = modify_csp(csp, self.client_url)
+        result = modify_csp(csp)
 
         self.assertIn("script-src 'self' https://cdn.example.com 'unsafe-eval'", result)
         self.assertIn("style-src 'self'", result)
-        self.assertIn(f"frame-src 'self' {self.client_url}", result)
+        self.assertNotIn("frame-ancestors", result)
 
     def test_handles_empty_semicolons(self):
         """Test handling of empty sections between semicolons"""
         csp = "script-src 'self';;; style-src 'self';;"
-        result = modify_csp(csp, self.client_url)
+        result = modify_csp(csp)
 
         self.assertIn("script-src 'self' 'unsafe-eval'", result)
         self.assertIn("style-src 'self'", result)
-        self.assertIn(f"frame-src {self.client_url}", result)
 
     def test_real_world_csp(self):
         """Test with a complex, real-world-like CSP"""
@@ -814,17 +794,16 @@ class TestModifyCSP(unittest.TestCase):
             "form-action 'self'"
         )
 
-        result = modify_csp(csp, self.client_url)
+        result = modify_csp(csp)
 
         # Check that unsafe-eval was added to script-src
-        self.assertIn("'unsafe-eval'", result)
         self.assertIn(
             "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net 'unsafe-eval'",
             result,
         )
 
-        # Check that frame-src was added
-        self.assertIn(f"frame-src {self.client_url}", result)
+        # Check frame ancestors
+        self.assertNotIn("frame-ancestors", result)
 
         # Check that all other directives are preserved
         self.assertIn("default-src 'none'", result)
@@ -832,7 +811,6 @@ class TestModifyCSP(unittest.TestCase):
         self.assertIn("font-src 'self' https://fonts.gstatic.com", result)
         self.assertIn("img-src 'self' data: https:", result)
         self.assertIn("connect-src 'self' https://api.example.com", result)
-        self.assertIn("frame-ancestors 'none'", result)
         self.assertIn("base-uri 'self'", result)
         self.assertIn("form-action 'self'", result)
 
@@ -840,7 +818,7 @@ class TestModifyCSP(unittest.TestCase):
         """Test handling when client URL appears as substring of another URL"""
         longer_url = f"{self.client_url}/some/path"
         csp = f"frame-src 'self' {longer_url}"
-        result = modify_csp(csp, self.client_url)
+        result = modify_csp(csp)
 
         # Should not add client URL if it would be redundant with longer URL.
         self.assertIn(longer_url, result)
