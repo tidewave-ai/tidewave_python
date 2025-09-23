@@ -7,6 +7,7 @@ from unittest.mock import Mock
 
 import django
 from django.conf import settings
+from django.http import HttpResponse
 from django.test import RequestFactory, override_settings
 
 # Configure Django settings for testing
@@ -109,15 +110,43 @@ class TestDjangoMiddleware(unittest.TestCase):
 
             self.assertEqual(config["project_name"], "django_app")
 
-    def test_non_tidewave_request_passes_through(self):
+    def test_django_request_passes_through(self):
         """Test that non-tidewave requests pass through unchanged"""
+        response = HttpResponse("Django response")
+        self.get_response.return_value = response
+
         middleware = Middleware(self.get_response)
-        request = self.factory.get("/some/other/path")
+        request = self.factory.get("/django/path")
 
-        result = middleware.process_request(request)
+        response = middleware(request)
 
-        # Should return None to pass through to next middleware
-        self.assertIsNone(result)
+        self.assertIn("Django response", str(response.content))
+
+    def test_django_response_headers_modified(self):
+        """Test that Django response headers are modified by middleware"""
+
+        response = HttpResponse("Django response")
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'none'; script-src 'self'; frame-ancestors 'none'"
+        )
+
+        self.get_response.return_value = response
+
+        middleware = Middleware(self.get_response)
+        request = self.factory.get("/django/path")
+
+        response = middleware(request)
+
+        csp_value = response.headers.get("Content-Security-Policy", "")
+
+        # Test that X-Frame-Options is removed
+        self.assertNotIn("X-Frame-Options", response.headers)
+        # Test that CSP is modified to allow Tidewave client
+        self.assertIn("script-src 'self' 'unsafe-eval'", csp_value)
+        self.assertNotIn("frame-ancestors", csp_value)
+        # Test that original directives are preserved
+        self.assertIn("default-src 'none'", csp_value)
 
     def test_django_request_to_wsgi_environ_conversion(self):
         """Test conversion from Django request to WSGI environ"""

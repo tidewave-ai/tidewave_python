@@ -8,17 +8,16 @@ from typing import Any, Callable
 
 from django.conf import settings
 from django.http import HttpResponse
-from django.utils.deprecation import MiddlewareMixin
 from django.utils.log import CallbackFilter
 
 import tidewave.django.tools as django_tools
 import tidewave.tools as tidewave_tools
 from tidewave.mcp_handler import MCPHandler
-from tidewave.middleware import Middleware as BaseMiddleware
+from tidewave.middleware import Middleware as BaseMiddleware, modify_csp
 from tidewave.tools.get_logs import file_handler
 
 
-class Middleware(MiddlewareMixin):
+class Middleware:
     """Django middleware for Tidewave MCP integration
 
     This middleware integrates Tidewave MCP functionality into Django applications.
@@ -49,8 +48,29 @@ class Middleware(MiddlewareMixin):
 
     def __init__(self, get_response: Callable):
         """Initialize Django middleware"""
-        super().__init__(get_response)
+        super().__init__()
 
+        self.get_response = get_response
+
+        self._setup_logging()
+
+        # Create MCP handler with tools
+        self.mcp_handler = MCPHandler(
+            [
+                django_tools.get_models,
+                tidewave_tools.get_docs,
+                tidewave_tools.get_logs,
+                tidewave_tools.get_source_location,
+                tidewave_tools.project_eval,
+            ]
+        )
+
+        # Configure middleware based on Django settings
+        self.config = self._build_config()
+
+        self.base_middleware = BaseMiddleware(self._dummy_wsgi_app, self.mcp_handler, self.config)
+
+    def _setup_logging(self):
         django_logger = logging.getLogger("django")
         if file_handler not in django_logger.handlers:
             file_handler.addFilter(
@@ -66,28 +86,6 @@ class Middleware(MiddlewareMixin):
             django_logger.addHandler(file_handler)
             django_logger.setLevel(logging.DEBUG)
             django_logger.propagate = False
-
-        self.get_response = get_response
-
-        # Create MCP handler with tools
-        self.mcp_handler = MCPHandler(
-            [
-                django_tools.get_models,
-                tidewave_tools.get_docs,
-                tidewave_tools.get_logs,
-                tidewave_tools.get_source_location,
-                tidewave_tools.project_eval,
-            ]
-        )
-
-        # Create dummy WSGI app for base middleware
-        def dummy_wsgi_app(environ, start_response):
-            start_response("404 Not Found", [("Content-Type", "text/plain")])
-            return [b"Not Found"]
-
-        # Configure middleware based on Django settings
-        config = self._build_config()
-        self.base_middleware = BaseMiddleware(dummy_wsgi_app, self.mcp_handler, config)
 
     def _build_config(self) -> dict[str, Any]:
         """Build configuration based on Django settings"""
@@ -120,11 +118,31 @@ class Middleware(MiddlewareMixin):
 
         return config
 
-    def process_request(self, request):
-        """Process incoming request - let BaseMiddleware handle Tidewave routes"""
-        # Only handle requests that start with /tidewave
-        if not request.path.startswith("/tidewave"):
-            return None
+    def _dummy_wsgi_app(self, environ, start_response):
+        """Dummy WSGI app for base middleware (should never be called for Tidewave routes)"""
+        start_response("404 Not Found", [("Content-Type", "text/plain")])
+        return [b"Not Found"]
+
+    def __call__(self, request):
+        """
+        Modern Django middleware interface.
+
+        This method is called for each request and should return either:
+        - None: Continue to the next middleware/view
+        - HttpResponse: Short-circuit and return this response
+        """
+        # Check if this is a Tidewave route
+        if request.path.startswith("/tidewave"):
+            response = self._handle_tidewave_request(request)
+            if response:
+                return response
+
+        # Handle Django request normally
+        response = self.get_response(request)
+        return self._process_response(request, response)
+
+    def _handle_tidewave_request(self, request):
+        """Handle Tidewave routes through base middleware"""
 
         # Convert Django request to WSGI environ
         environ = self._django_request_to_wsgi_environ(request)
@@ -143,8 +161,6 @@ class Middleware(MiddlewareMixin):
         # Convert WSGI response back to Django HttpResponse
         status_code = int(response_data["status"].split()[0])
         headers = dict(response_data["headers"])
-
-        # Collect response body
         body = b"".join(result)
 
         response = HttpResponse(
@@ -162,10 +178,25 @@ class Middleware(MiddlewareMixin):
 
     def _django_request_to_wsgi_environ(self, request) -> dict[str, Any]:
         """Convert Django request to WSGI environ dict"""
-        # Copy Django's META dict (which is the WSGI environ)
         environ = request.META.copy()
-
-        # Inject the input stream
         environ["wsgi.input"] = io.BytesIO(request.body)
 
         return environ
+
+    def _process_response(self, request, response):
+        """
+        Modify headers to allow embedding in Tidewave:
+        - Remove X-Frame-Options
+        - Add unsafe-eval to script-src in CSP if present
+        - Remove frame-ancestors from CSP if present
+
+        """
+
+        if "X-Frame-Options" in response:
+            del response["X-Frame-Options"]
+
+        csp_header = response.get("Content-Security-Policy")
+        if csp_header:
+            response["Content-Security-Policy"] = modify_csp(csp_header)
+
+        return response
