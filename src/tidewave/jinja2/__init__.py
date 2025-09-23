@@ -19,9 +19,8 @@ class TemplateAnnotationExtension(Extension):
 
     def _has_html_content_in_ast(self, body):
         for node in body:
-            for text_node in node.find_all(nodes.TemplateData):
-                if "<" in text_node.data:
-                    return True
+            if self._has_html_content_in_node(node):
+                return True
         return False
 
     def _has_html_content_in_node(self, node):
