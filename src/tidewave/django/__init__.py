@@ -57,6 +57,7 @@ class Middleware:
         # Create MCP handler with tools
         self.mcp_handler = MCPHandler(
             [
+                django_tools.execute_sql_query,
                 django_tools.get_models,
                 tidewave_tools.get_docs,
                 tidewave_tools.get_logs,
