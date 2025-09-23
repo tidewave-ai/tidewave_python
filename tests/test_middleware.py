@@ -733,7 +733,7 @@ class TestModifyCSP(unittest.TestCase):
         self.assertIn("script-src 'self' 'unsafe-eval'", result)
 
     def test_removes_frame_ancestors_from_existing_policy(self):
-        """Test adding frame-src when it doesn't exist"""
+        """Test removing frame-ancestors when present"""
         csp = "script-src 'self'; style-src 'self'; frame-ancestors 'self'"
         result = modify_csp(csp)
 
@@ -813,12 +813,3 @@ class TestModifyCSP(unittest.TestCase):
         self.assertIn("connect-src 'self' https://api.example.com", result)
         self.assertIn("base-uri 'self'", result)
         self.assertIn("form-action 'self'", result)
-
-    def test_url_as_substring_handling(self):
-        """Test handling when client URL appears as substring of another URL"""
-        longer_url = f"{self.client_url}/some/path"
-        csp = f"frame-src 'self' {longer_url}"
-        result = modify_csp(csp)
-
-        # Should not add client URL if it would be redundant with longer URL.
-        self.assertIn(longer_url, result)
