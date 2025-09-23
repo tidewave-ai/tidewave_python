@@ -109,7 +109,7 @@ class TestTemplateDebugRender(TestCase):
             with self.subTest(name=name):
                 result = render_to_string(f"non_html/{name}")
 
-                with open(TEMPLATES_PATH / "non_html" / name, "r", encoding="utf-8") as f:
+                with open(TEMPLATES_PATH / "non_html" / name, encoding="utf-8") as f:
                     content = f.read()
 
                 self.assertNotIn("<!-- TEMPLATE:", result)
@@ -174,14 +174,15 @@ class TestTemplateDebugRender(TestCase):
         self.assertEqual(
             result.replace("\n", "").strip(),
             (
-                f"<!-- TEMPLATE: {TEMPLATES_PATH / 'child.html'}, EXTENDS: {TEMPLATES_PATH / 'base.html'} -->"
+                f"<!-- SUBTEMPLATE: {TEMPLATES_PATH / 'child.html'} -->"
+                f"<!-- TEMPLATE: {TEMPLATES_PATH / 'base.html'} -->"
                 f"<!-- BLOCK: content, TEMPLATE: {TEMPLATES_PATH / 'child.html'} -->"
                 f"<!-- BLOCK: content, TEMPLATE: {TEMPLATES_PATH / 'base.html'} -->"
                 "<p>Base content</p>"
                 "<!-- END BLOCK: content -->"
                 "<p>Child content</p>"
                 "<!-- END BLOCK: content -->"
-                f"<!-- END TEMPLATE: {TEMPLATES_PATH / 'child.html'} -->"
+                f"<!-- END TEMPLATE: {TEMPLATES_PATH / 'base.html'} -->"
             ),
         )
 
@@ -194,11 +195,13 @@ class TestTemplateDebugRender(TestCase):
         self.assertEqual(
             result.replace("\n", "").strip(),
             (
-                f"<!-- TEMPLATE: {TEMPLATES_PATH / 'grandchild.html'}, EXTENDS: {TEMPLATES_PATH / 'child.html'}, EXTENDS: {TEMPLATES_PATH / 'base.html'} -->"
+                f"<!-- SUBTEMPLATE: {TEMPLATES_PATH / 'grandchild.html'} -->"
+                f"<!-- SUBTEMPLATE: {TEMPLATES_PATH / 'child.html'} -->"
+                f"<!-- TEMPLATE: {TEMPLATES_PATH / 'base.html'} -->"
                 f"<!-- BLOCK: content, TEMPLATE: {TEMPLATES_PATH / 'grandchild.html'} -->"
                 "<p>Grandchild content</p>"
                 "<!-- END BLOCK: content -->"
-                f"<!-- END TEMPLATE: {TEMPLATES_PATH / 'grandchild.html'} -->"
+                f"<!-- END TEMPLATE: {TEMPLATES_PATH / 'base.html'} -->"
             ),
         )
 
@@ -211,14 +214,15 @@ class TestTemplateDebugRender(TestCase):
         self.assertEqual(
             result.replace("\n", "").strip(),
             (
-                f"<!-- TEMPLATE: {TEMPLATES_PATH / 'child-includes.html'}, EXTENDS: {TEMPLATES_PATH / 'base.html'} -->"
+                f"<!-- SUBTEMPLATE: {TEMPLATES_PATH / 'child-includes.html'} -->"
+                f"<!-- TEMPLATE: {TEMPLATES_PATH / 'base.html'} -->"
                 f"<!-- BLOCK: content, TEMPLATE: {TEMPLATES_PATH / 'child-includes.html'} -->"
                 "<p>Child content</p>"
                 f"<!-- TEMPLATE: {TEMPLATES_PATH / 'include.html'} -->"
                 "<p>Included content: foo</p>"
                 f"<!-- END TEMPLATE: {TEMPLATES_PATH / 'include.html'} -->"
                 "<!-- END BLOCK: content -->"
-                f"<!-- END TEMPLATE: {TEMPLATES_PATH / 'child-includes.html'} -->"
+                f"<!-- END TEMPLATE: {TEMPLATES_PATH / 'base.html'} -->"
             ),
         )
 

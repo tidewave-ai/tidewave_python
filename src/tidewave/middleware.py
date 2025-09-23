@@ -92,17 +92,7 @@ class Middleware:
             else:
                 return self._send_error_response(start_response, HTTPStatus.METHOD_NOT_ALLOWED)
 
-        # Call the downstream app and modify headers
-        def capture_start_response(status, headers, exc_info=None):
-            # Remove X-Frame-Options headers to allow embedding the app in Tidewave
-            filtered_headers = [
-                (name, value)
-                for name, value in headers
-                if name.lower() not in ("x-frame-options")
-            ]
-            return start_response(status, filtered_headers, exc_info)
-
-        return self.app(environ, capture_start_response)
+        return self.app(environ, start_response)
 
     def _handle_home_route(self, start_response: Callable) -> Iterator[bytes]:
         client_config = self._get_config_data()
@@ -358,3 +348,48 @@ class Middleware:
             error_json = json.dumps({"status": 213}).encode("utf-8")
             chunk = struct.pack("!BL", 1, len(error_json)) + error_json
             yield chunk
+
+
+def modify_csp(csp_value: str) -> str:
+    """
+    Modify CSP header to support Tidewave embedding:
+    - Add 'unsafe-eval' to script-src if not present
+    - Remove frame-ancestors from CSP if present
+
+    Args:
+        csp_value: Original CSP header value
+
+    Returns:
+        Modified CSP header value
+    """
+    directives = {}
+    parts = [part.strip() for part in csp_value.split(";") if part.strip()]
+
+    for part in parts:
+        if " " in part:
+            directive, sources = part.split(" ", 1)
+            directives[directive.lower()] = sources.strip()
+        else:
+            # Directive with no sources (like 'upgrade-insecure-requests')
+            directives[part.lower()] = ""
+
+    # Modify script-src to include unsafe-eval.
+    script_src = directives.get("script-src", "")
+    if script_src:
+        script_sources = script_src.split()
+        if "'unsafe-eval'" not in script_sources:
+            directives["script-src"] = f"{' '.join(script_sources)} 'unsafe-eval'"
+    elif not script_src:
+        # No script-src directive, add one with unsafe-eval.
+        directives["script-src"] = "'unsafe-eval'"
+
+    # Rebuild CSP header
+    csp_parts = []
+    for directive, sources in directives.items():
+        if directive != "frame-ancestors":
+            if sources:
+                csp_parts.append(f"{directive} {sources}")
+            else:
+                csp_parts.append(directive)
+
+    return "; ".join(csp_parts)

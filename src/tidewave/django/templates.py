@@ -9,7 +9,6 @@ from django.template.base import mark_safe
 from django.template.loader_tags import BlockNode, ExtendsNode
 from django.utils.safestring import SafeString
 
-
 logger = logging.getLogger("django")
 
 
@@ -28,8 +27,15 @@ def debug_render(self, context) -> str:
 
         extends_parents = get_extends_parents(self)
 
-        extends_info = "".join(f", EXTENDS: {p}" for p in extends_parents)
-        start_comment = f"<!-- TEMPLATE: {template_path}{extends_info} -->"
+        if extends_parents == []:
+            subtemplates = []
+        else:
+            subtemplates = [template_path] + extends_parents[:-1]
+            template_path = extends_parents[-1]
+
+        subtemplates_info = "".join(f"<!-- SUBTEMPLATE: {t} -->" for t in subtemplates)
+
+        start_comment = f"{subtemplates_info}<!-- TEMPLATE: {template_path} -->"
         end_comment = f"<!-- END TEMPLATE: {template_path} -->"
 
         return wrap_rendered(content, start_comment, end_comment)
