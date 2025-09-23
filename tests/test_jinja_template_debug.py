@@ -41,7 +41,7 @@ class TestJinjaTemplateDebug(TestCase):
         result = template.render()
 
         expected = (
-            "<!-- TEMPLATE: tests/jinja2/child.html -->\n"
+            "<!-- SUBTEMPLATE: tests/jinja2/child.html -->\n"
             "<!-- TEMPLATE: tests/jinja2/base.html -->\n"
             "<!-- BLOCK: content, TEMPLATE: tests/jinja2/child.html -->\n"
             " <!-- BLOCK: content, TEMPLATE: tests/jinja2/base.html -->\n"
@@ -90,8 +90,8 @@ class TestJinjaTemplateDebug(TestCase):
         result = template.render()
 
         expected = (
-            "<!-- TEMPLATE: tests/jinja2/grandchild.html -->\n"
-            "<!-- TEMPLATE: tests/jinja2/child.html -->\n"
+            "<!-- SUBTEMPLATE: tests/jinja2/grandchild.html -->\n"
+            "<!-- SUBTEMPLATE: tests/jinja2/child.html -->\n"
             "<!-- TEMPLATE: tests/jinja2/base.html -->\n"
             "<!-- BLOCK: content, TEMPLATE: tests/jinja2/grandchild.html -->\n"
             "\n"
@@ -110,7 +110,7 @@ class TestJinjaTemplateDebug(TestCase):
         result = template.render(value="foo")
 
         expected = (
-            "<!-- TEMPLATE: tests/jinja2/child-includes.html -->\n"
+            "<!-- SUBTEMPLATE: tests/jinja2/child-includes.html -->\n"
             "<!-- TEMPLATE: tests/jinja2/base.html -->\n"
             "<!-- BLOCK: content, TEMPLATE: tests/jinja2/child-includes.html -->\n"
             "\n"

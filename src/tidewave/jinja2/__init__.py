@@ -79,15 +79,36 @@ class TemplateAnnotationExtension(Extension):
         # Wrap blocks with annotations
         body = self._wrap_blocks_with_annotations(body, filename_value)
 
-        start_comment = nodes.Output(
-            [nodes.TemplateData(f"<!-- TEMPLATE: {filename_value} -->\n")]
-        ).set_lineno(lineno)
+        # Check if this template has an extends node
+        has_extends = self._has_extends_node(body)
 
-        end_comment = nodes.Output(
-            [nodes.TemplateData(f"\n<!-- END TEMPLATE: {filename_value} -->")]
-        ).set_lineno(lineno)
+        if has_extends:
+            # For templates with extends, only emit SUBTEMPLATE comment (no closing)
+            start_comment = nodes.Output(
+                [nodes.TemplateData(f"<!-- SUBTEMPLATE: {filename_value} -->\n")]
+            ).set_lineno(lineno)
+            return [start_comment] + body
+        else:
+            # For base templates, emit full TEMPLATE comments
+            start_comment = nodes.Output(
+                [nodes.TemplateData(f"<!-- TEMPLATE: {filename_value} -->\n")]
+            ).set_lineno(lineno)
 
-        return [start_comment] + body + [end_comment]
+            end_comment = nodes.Output(
+                [nodes.TemplateData(f"\n<!-- END TEMPLATE: {filename_value} -->")]
+            ).set_lineno(lineno)
+
+            return [start_comment] + body + [end_comment]
+
+    def _has_extends_node(self, body):
+        """Check if the template body contains an extends node"""
+        for node in body:
+            if isinstance(node, nodes.Extends):
+                return True
+            # Also check nested nodes recursively
+            for child in node.find_all(nodes.Extends):
+                return True
+        return False
 
 
 # Expose the extension as the main export
