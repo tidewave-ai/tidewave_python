@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+import traceback
 from typing import Optional
 
 from django.conf import settings
@@ -8,7 +9,7 @@ from django.template.base import mark_safe
 from django.template.loader_tags import BlockNode, ExtendsNode
 from django.utils.safestring import SafeString
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("django")
 
 
 def debug_render(self, context) -> str:
@@ -39,8 +40,9 @@ def debug_render(self, context) -> str:
 
         return wrap_rendered(content, start_comment, end_comment)
     except Exception as e:
+        message = "".join(traceback.format_exception(type(e), e, e.__traceback__))
         logger.warning(
-            f"Tidewave failed to annotate template, please open up an issue on https://github.com/tidewave-ai/tidewave_python.\nException: {e}"
+            f"Tidewave failed to annotate template, please open up an issue on https://github.com/tidewave-ai/tidewave_python.\nException: {message}"
         )
         return content
 
