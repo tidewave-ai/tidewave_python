@@ -35,6 +35,15 @@ class Middleware:
         - TIDEWAVE['allow_remote_access']: Whether to allow remote connections (default False)
         - TIDEWAVE['team']: Enable Tidewave for teams
 
+    Optional configuration:
+        If you are using Jinja2 with Django, you need to explicitly add
+
+        JINJA2_ENVIRONMENT_OPTIONS = {
+            "extensions": [
+                "tidewave.jinja2.Extension"
+            ],
+        }
+
     """
 
     def __init__(self, get_response: Callable):

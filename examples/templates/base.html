@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}{{ title }}{% endblock %}</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        line-height: 1.6;
+      }
+      header {
+        background-color: #f4f4f4;
+        padding: 1rem;
+        margin-bottom: 2rem;
+        border-radius: 5px;
+      }
+      nav {
+        margin-bottom: 2rem;
+      }
+      nav a {
+        margin-right: 1rem;
+        text-decoration: none;
+        color: #007bff;
+      }
+      nav a:hover {
+        text-decoration: underline;
+      }
+      .content {
+        background-color: #fff;
+        padding: 2rem;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>{% block header %}Tidewave Flask Example{% endblock %}</h1>
+    </header>
+
+    <nav>
+      <a href="/">Home</a>
+    </nav>
+
+    <main class="content">
+      {% block content %}
+      <p>Default content</p>
+      {% endblock %}
+    </main>
+  </body>
+</html>

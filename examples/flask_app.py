@@ -3,23 +3,22 @@ uv run python examples/flask_app.py
 """
 # ruff: noqa: T201 -- allow print statements
 
-from flask import Flask
+from flask import Flask, render_template
 
 from tidewave.flask import Middleware
+from tidewave.jinja2 import Extension as TidewaveJinjaExtension
 
 
 def create_app():
     """Create a Flask app with MCP middleware"""
     app = Flask(__name__)
 
+    # Configure Jinja2 with Tidewave extension
+    app.jinja_env.add_extension(TidewaveJinjaExtension)
+
     @app.route("/")
     def home():
-        return """
-        <html>
-            <head><title>Flask + Tidewave MCP</title></head>
-            <body><h1>Flask app with MCP middleware</h1></body>
-        </html>
-        """
+        return render_template("home.html", title="Flask + Tidewave MCP", message="Welcome to Flask with Jinja2 template debugging!")
 
     return app
 
