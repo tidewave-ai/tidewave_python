@@ -4,27 +4,35 @@ uv run python examples/fastapi_app.py
 # ruff: noqa: T201 -- allow print statements
 
 import asyncio
+from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 
 from tidewave.fastapi import mount
+from tidewave.jinja2 import Extension as TidewaveJinjaExtension
 
 
 def create_app():
     """Create a FastAPI app with mounted WSGI middleware"""
     app = FastAPI(title="FastAPI + Tidewave MCP")
 
+    # Configure Jinja2 templates with Tidewave extension
+    templates_dir = Path(__file__).parent / "templates"
+    templates = Jinja2Templates(directory=str(templates_dir))
+    templates.env.add_extension(TidewaveJinjaExtension)
+
     @app.get("/", response_class=HTMLResponse)
-    async def fastapi_endpoint():
-        return """
-        <html>
-            <head><title>FastAPI + Tidewave MCP</title></head>
-            <body>
-                <h1>FastAPI app with MCP middleware</h1>
-            </body>
-        </html>
-        """
+    async def fastapi_endpoint(request: Request):
+        return templates.TemplateResponse(
+            "home.html",
+            {
+                "request": request,
+                "title": "FastAPI + Tidewave MCP",
+                "message": "Welcome to FastAPI with Jinja2 template debugging!"
+            }
+        )
 
     mount(app)
     return app
