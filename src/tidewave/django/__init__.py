@@ -20,10 +20,6 @@ from tidewave.tools.get_logs import file_handler
 class Middleware:
     """Django middleware for Tidewave MCP integration
 
-    This middleware integrates Tidewave MCP functionality into Django applications.
-    It automatically configures security settings based on Django's ALLOWED_HOSTS and
-    DEBUG settings.
-
     Usage:
         # After MIDDLEWARE= and INSTALLED_APPS= definition
         if DEBUG:
@@ -32,11 +28,11 @@ class Middleware:
 
     Configuration:
         - ALLOWED_HOSTS: Used as allowed origins
-        - TIDEWAVE['allow_remote_access']: Whether to allow remote connections (default False)
-        - TIDEWAVE['team']: Enable Tidewave for teams
+        - TIDEWAVE["allow_remote_access"]: Whether to allow remote connections (default False)
+        - TIDEWAVE["team"]: Enable Tidewave for teams
 
     Optional configuration:
-        If you are using Jinja2 with Django, you need to explicitly add
+        If you are using Jinja2 with Django, you need to add our extension:
 
         JINJA2_ENVIRONMENT_OPTIONS = {
             "extensions": [
