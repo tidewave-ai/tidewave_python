@@ -18,9 +18,12 @@ classifiers = [
 ]
 dependencies = [ "pydantic>=2" ]
 
+[optional-dependencies]
+django = ["django>=4.2"]
+
 [dependency-groups]
 dev = [
-  "django>=4.2.23",
+  "django>=4.2",
   "fastapi>=0.100",
   "flask>=2",
   "pytest>=7",
