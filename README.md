@@ -12,8 +12,8 @@ We currently support Django but work for FastAPI and Flask is underway. Reach ou
 
 Add `tidewave[django]` as a dependency to your `pyproject.toml`:
 
-```toml
-"tidewave[django]>=0.1",
+```
+"tidewave[django] @ git+https://github.com/tidewave-ai/tidewave_python.git",
 ```
 
 Then open up your `settings.py` and add the following after your `MIDDLEWARE` and `INSTALLED_APPS` definition:
@@ -66,7 +66,7 @@ uv run ruff format .
 
 ## Acknowledgements
 
-A thank you to Rob Hudson (@robhudson) for implementing the Django integration.
+A thank you to [Rob Hudson](https://github.com/robhudson) for implementing the Django integration.
 
 ## License
 
