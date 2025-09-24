@@ -30,8 +30,8 @@ def create_app():
             {
                 "request": request,
                 "title": "FastAPI + Tidewave MCP",
-                "message": "Welcome to FastAPI with Jinja2 template debugging!"
-            }
+                "message": "Welcome to FastAPI with Jinja2 template debugging!",
+            },
         )
 
     mount(app)

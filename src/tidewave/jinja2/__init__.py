@@ -105,7 +105,7 @@ class TemplateAnnotationExtension(Extension):
             if isinstance(node, nodes.Extends):
                 return True
             # Also check nested nodes recursively
-            for child in node.find_all(nodes.Extends):
+            for _child in node.find_all(nodes.Extends):
                 return True
         return False
 

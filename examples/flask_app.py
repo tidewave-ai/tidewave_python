@@ -18,7 +18,11 @@ def create_app():
 
     @app.route("/")
     def home():
-        return render_template("home.html", title="Flask + Tidewave MCP", message="Welcome to Flask with Jinja2 template debugging!")
+        return render_template(
+            "home.html",
+            title="Flask + Tidewave MCP",
+            message="Welcome to Flask with Jinja2 template debugging!",
+        )
 
     return app
 

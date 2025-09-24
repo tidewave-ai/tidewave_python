@@ -1,6 +1,6 @@
 import logging
-from pathlib import Path
 import traceback
+from pathlib import Path
 from typing import Optional
 
 from django.conf import settings
@@ -42,7 +42,8 @@ def debug_render(self, context) -> str:
     except Exception as e:
         message = "".join(traceback.format_exception(type(e), e, e.__traceback__))
         logger.warning(
-            f"Tidewave failed to annotate template, please open up an issue on https://github.com/tidewave-ai/tidewave_python.\nException: {message}"
+            f"Tidewave failed to annotate template, please open up an issue on "
+            f"https://github.com/tidewave-ai/tidewave_python.\nException: {message}"
         )
         return content
 
@@ -80,7 +81,8 @@ def debug_block_render(self, context) -> str:
         return wrap_rendered(content, start_comment, end_comment)
     except Exception as e:
         logger.warning(
-            f"Tidewave failed to annotate block, please open up an issue on https://github.com/tidewave-ai/tidewave_python.\nException: {e}"
+            f"Tidewave failed to annotate block, please open up an issue on "
+            f"https://github.com/tidewave-ai/tidewave_python.\nException: {e}"
         )
         return content
 
