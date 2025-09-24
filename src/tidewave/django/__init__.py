@@ -81,8 +81,6 @@ class Middleware:
                 )
             )
             django_logger.addHandler(file_handler)
-            django_logger.setLevel(logging.DEBUG)
-            django_logger.propagate = False
 
     def _build_config(self) -> dict[str, Any]:
         """Build configuration based on Django settings"""
