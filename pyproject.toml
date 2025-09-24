@@ -18,7 +18,7 @@ classifiers = [
 ]
 dependencies = [ "pydantic>=2" ]
 
-[optional-dependencies]
+[project.optional-dependencies]
 django = ["django>=4.2"]
 
 [dependency-groups]
