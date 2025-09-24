@@ -53,12 +53,12 @@ class TestDjangoExecuteSqlQuery(TestCase):
 
     def test_execute_query_with_invalid_sql(self):
         """Test executing an invalid SQL query."""
-        with self.assertRaises(Exception):
+        with self.assertRaises(Exception):  # noqa: B017
             execute_sql_query("INVALID SQL QUERY")
 
     def test_execute_query_with_wrong_parameter_count(self):
         """Test executing a query with wrong number of parameters."""
-        with self.assertRaises(Exception):
+        with self.assertRaises(Exception):  # noqa: B017
             execute_sql_query("SELECT %s + %s", [1])  # Missing one parameter
 
     def test_execute_command_with_no_results(self):

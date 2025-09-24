@@ -76,7 +76,7 @@ class TestJinjaTemplateDebug(TestCase):
             "This is a plain text template.\n"
             "It has no HTML tags.\n"
             "Just some regular text content.\n"
-            "Test message"
+            "Test message\n"
         )
 
         # Should not contain any annotation comments
@@ -117,6 +117,7 @@ class TestJinjaTemplateDebug(TestCase):
             "<p>Child content</p>\n"
             "<!-- TEMPLATE: tests/jinja2/include.html -->\n"
             "<p>Included content: foo</p>\n"
+            "\n"
             "<!-- END TEMPLATE: tests/jinja2/include.html -->\n"
             "\n"
             "<!-- END BLOCK: content -->\n"
