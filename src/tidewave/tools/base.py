@@ -5,7 +5,7 @@ Base MCP Tool functionality
 import inspect
 from typing import Any, Callable, get_type_hints
 
-from pydantic import ValidationError, create_model, Field
+from pydantic import Field, ValidationError, create_model
 
 
 class MCPTool:
@@ -59,25 +59,19 @@ class MCPTool:
 
             param_type = type_hints[param_name]
 
-            # Handle field aliasing for reserved names
-            field_name = param_name
-            if param_name in reserved_names:
-                field_name = f"alias_{param_name}"
-
-            # Handle default values
             if param.default == inspect.Parameter.empty:
                 if param_name in reserved_names:
-                    fields[field_name] = (param_type, Field(alias=param_name))
+                    fields[f"alias_{param_name}"] = (param_type, Field(alias=param_name))
                 else:
-                    fields[field_name] = (param_type, ...)
+                    fields[param_name] = (param_type, ...)
             else:
                 if param_name in reserved_names:
-                    fields[field_name] = (
+                    fields[f"alias_{param_name}"] = (
                         param_type,
                         Field(default=param.default, alias=param_name),
                     )
                 else:
-                    fields[field_name] = (param_type, param.default)
+                    fields[param_name] = (param_type, param.default)
 
         return create_model(f"{self.name}_model", **fields)
 
