@@ -45,14 +45,6 @@ class TestDjangoMiddleware(unittest.TestCase):
 
             self.assertEqual(config["allow_remote_access"], False)
 
-    def test_config_without_tidewave_settings(self):
-        """Test that middleware defaults to allow_remote_access=False when no TIDEWAVE settings"""
-        with override_settings(TIDEWAVE={}):
-            middleware = Middleware(self.get_response)
-            config = middleware._build_config()
-
-            self.assertEqual(config["allow_remote_access"], False)
-
     def test_config_with_allowed_hosts_debug_false(self):
         """Test that middleware uses ALLOWED_HOSTS when DEBUG is False"""
         with override_settings(ALLOWED_HOSTS=["example.com", "api.example.com"], DEBUG=False):

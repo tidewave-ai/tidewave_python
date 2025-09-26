@@ -17,9 +17,12 @@ def create_app():
         SECRET_KEY="django-insecure-example-key-not-for-production",
         ROOT_URLCONF=__name__,
         MIDDLEWARE=[
+            "tidewave.django.Middleware",
             "django.middleware.security.SecurityMiddleware",
             "django.middleware.common.CommonMiddleware",
-            "tidewave.django.Middleware",
+        ],
+        INSTALLED_APPS=[
+            "tidewave.django.apps.TidewaveConfig",
         ],
         DATABASES={
             "default": {

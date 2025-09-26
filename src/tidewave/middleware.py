@@ -95,20 +95,21 @@ class Middleware:
         return self.app(environ, start_response)
 
     def _handle_home_route(self, start_response: Callable) -> Iterator[bytes]:
+        client_url = self.config.get("client_url", "https://tidewave.ai")
         client_config = self._get_config_data()
         config_json = html.escape(json.dumps(client_config))
 
         template = f"""
-            <!DOCTYPE html>
-            <html>
-                <head>
+        <!DOCTYPE html>
+        <html>
+            <head>
                 <meta charset="UTF-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
                 <meta name="tidewave:config" content="{config_json}" />
-                <script type="module" src="{self.config.get("client_url")}/tc/tc.js"></script>
-                </head>
-                <body></body>
-            </html>
+                <script type="module" src="{client_url}/tc/tc.js"></script>
+            </head>
+            <body></body>
+        </html>
         """
 
         response_headers = [
