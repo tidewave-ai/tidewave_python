@@ -69,16 +69,13 @@ class TestDjangoGetModels(TestCase):
             mock_models.append(mock_model)
 
         with patch("django.apps.apps.get_models") as mock_get_models:
-            with patch("tidewave.tools.source.get_relative_source_location") as mock_location:
-                mock_get_models.return_value = mock_models
-                mock_location.return_value = "test.py:1"
+            mock_get_models.return_value = mock_models
+            result = get_models()
 
-                result = get_models()
-
-                lines = result.strip().split("\n")
-                self.assertIn("AlphaModel", lines[0])
-                self.assertIn("BetaModel", lines[1])
-                self.assertIn("ZebraModel", lines[2])
+            lines = result.strip().split("\n")
+            self.assertIn("AlphaModel", lines[0])
+            self.assertIn("BetaModel", lines[1])
+            self.assertIn("ZebraModel", lines[2])
 
     def test_model_without_source_location(self):
         """Test handling of models that don't have source locations."""
@@ -87,10 +84,8 @@ class TestDjangoGetModels(TestCase):
         mock_model._meta.abstract = False
 
         with patch("django.apps.apps.get_models") as mock_get_models:
-            with patch("tidewave.tools.source.get_relative_source_location") as mock_location:
-                mock_get_models.return_value = [mock_model]
-                mock_location.return_value = None
+            mock_get_models.return_value = [mock_model]
 
-                result = get_models()
+            result = get_models()
 
-                self.assertEqual(result.strip(), "* TestModel")
+            self.assertEqual(result.strip(), "* TestModel")
