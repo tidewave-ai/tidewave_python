@@ -4,7 +4,7 @@ Tidewave is the coding agent for full-stack web app development, deeply integrat
 
 This project can also be used as a standalone Model Context Protocol (MCP) server for your editors.
 
-We currently support Django but work for FastAPI and Flask is underway. Reach out if you want to help!
+We currently support Django but work on FastAPI and Flask is underway. Reach out if you want to help!
 
 ## Installation
 
