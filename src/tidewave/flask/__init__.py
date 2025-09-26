@@ -6,7 +6,7 @@ from typing import Any, Callable, Optional
 
 from tidewave import tools
 from tidewave.mcp_handler import MCPHandler
-from tidewave.middleware import Middleware as BaseMiddleware
+from tidewave.middleware import Middleware as BaseMiddleware, modify_csp
 
 
 class Middleware:
@@ -35,9 +35,32 @@ class Middleware:
         self.middleware = BaseMiddleware(app, self.mcp_handler, self.config)
 
     def __call__(self, environ: dict[str, Any], start_response: Callable):
-        """WSGI application entry point - delegate to base middleware"""
-        return self.middleware(environ, start_response)
+        """WSGI application entry point - handle response headers modification"""
+        # Check if this is a Tidewave route
+        if environ.get('PATH_INFO').startswith('/tidewave'):
+            # For Tidewave routes, delegate directly to base middleware
+            return self.middleware(environ, start_response)
+        
+        def custom_start_response(status, headers):
+            return start_response(status, self.__proceess_header(headers))
+
+        return self.middleware(environ, custom_start_response)
 
     def get_mcp_handler(self) -> MCPHandler:
         """Get the MCP handler instance for advanced usage"""
         return self.mcp_handler
+
+    def __proceess_header(self, headers):
+        """
+        Modify headers to allow embedding in Tidewave:
+        - Remove X-Frame-Options
+        - Add unsafe-eval to script-src in CSP if present
+        - Remove frame-ancestors from CSP if present
+        """
+        headers_dict = {name: value for name, value in headers}
+        if 'X-Frame-Options' in headers_dict:
+            del headers_dict['X-Frame-Options']
+        if 'Content-Security-Policy' in headers_dict:
+            headers_dict['Content-Security-Policy'] = modify_csp(headers_dict['Content-Security-Policy'])
+
+        return list(headers_dict.items())
