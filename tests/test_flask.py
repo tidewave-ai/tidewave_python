@@ -21,9 +21,8 @@ class TestFlaskTidewave(unittest.TestCase):
         def test_route():
             return "Test response"
 
-        tidewave = Tidewave()
-        config = {"allow_remote_access": True, "team": True}
-        tidewave.init_app(app, config)
+        tidewave = Tidewave({"allow_remote_access": True, "team": []})
+        tidewave.init_app(app)
 
         # Verify middleware was applied (wsgi_app should be wrapped with Middleware)
         self.assertEqual(type(app.wsgi_app).__name__, "Middleware")
@@ -51,9 +50,8 @@ class TestFlaskTidewave(unittest.TestCase):
             template = "<p>{{ 'Hello World' | upper }}</p>"
             return render_template_string(template)
 
-        tidewave = Tidewave()
-        config = {"allow_remote_access": False}
-        tidewave.init_app(app, config)
+        tidewave = Tidewave({"allow_remote_access": False})
+        tidewave.init_app(app)
 
         # Verify middleware was NOT applied (wsgi_app should still be original type)
         self.assertEqual(type(app.wsgi_app).__name__, original_wsgi_app_type)
