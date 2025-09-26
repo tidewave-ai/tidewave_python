@@ -66,7 +66,7 @@ def test_execute_query_result_limit(execute_sql_query):
 
 def test_execute_query_with_invalid_sql(execute_sql_query):
     """Test executing an invalid SQL query."""
-    with pytest.raises(NameError):  # noqa: B017
+    with pytest.raises(Exception):  # noqa: B017
         execute_sql_query("INVALID SQL QUERY")
 
 

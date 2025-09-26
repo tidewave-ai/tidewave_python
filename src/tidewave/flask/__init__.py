@@ -9,12 +9,13 @@ from flask import current_app
 from tidewave import tools
 from tidewave.mcp_handler import MCPHandler
 from tidewave.middleware import Middleware as BaseMiddleware, modify_csp
+from tidewave.sqlalchemy import get_models, execute_sql_query
 
 
 class Middleware:
     """Flask-specific middleware that handles MCP handler initialization and routing"""
 
-    def __init__(self, app: Callable, config: Optional[dict[str, Any]] = None):
+    def __init__(self, app: Callable, config: Optional[dict[str, Any]] = None, sqlalchemy=None):
         """Initialize Flask middleware with MCP handler
 
         Args:
@@ -23,17 +24,28 @@ class Middleware:
                 - allow_remote_access: bool (default False) - whether to allow remote connections
                 - allowed_origins: list of allowed origin hosts (default [])
                 - team: Enable Tidewave for teams
+            sqlalchemy: Optional SQLAlchemy instance (result of SQLAlchemy(app))
         """
         self.app = app
 
-        self.mcp_handler = MCPHandler(
-            [
-                tools.get_docs,
-                tools.get_logs,
-                tools.get_source_location,
-                tools.project_eval,
-            ]
-        )
+        # Initialize base tools
+        mcp_tools = [
+            tools.get_docs,
+            tools.get_logs,
+            tools.get_source_location,
+            tools.project_eval,
+        ]
+
+        # Add SQLAlchemy tools if provided
+        if sqlalchemy is not None:
+            mcp_tools.extend(
+                [
+                    get_models(sqlalchemy.Model),
+                    execute_sql_query(sqlalchemy.engine),
+                ]
+            )
+
+        self.mcp_handler = MCPHandler(mcp_tools)
 
         project_name = "flask_app"
         try:

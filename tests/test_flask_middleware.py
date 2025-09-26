@@ -53,3 +53,42 @@ class TestFlaskMiddleware(unittest.TestCase):
             self.assertIn("script-src 'self' 'unsafe-eval'", csp_value)
             self.assertNotIn("frame-ancestors", csp_value)
             self.assertIn("default-src 'none'", csp_value)
+
+    def test_middleware_with_sqlalchemy(self):
+        """Test that SQLAlchemy tools are added when sqlalchemy parameter is provided"""
+        mock_app = Mock()
+        mock_sqlalchemy = Mock()
+        mock_sqlalchemy.Model = Mock()
+        mock_sqlalchemy.engine = Mock()
+
+        middleware = Middleware(mock_app, sqlalchemy=mock_sqlalchemy)
+        mcp_handler = middleware.get_mcp_handler()
+
+        # Check that middleware and handler were created
+        self.assertIsNotNone(middleware)
+        self.assertIsNotNone(mcp_handler)
+
+        # Check that basic tools are still available
+        self.assertIn("project_eval", mcp_handler.tools)
+
+        # Check that SQLAlchemy tools are available
+        self.assertIn("get_models", mcp_handler.tools)
+        self.assertIn("execute_sql_query", mcp_handler.tools)
+
+    def test_middleware_without_sqlalchemy(self):
+        """Test that SQLAlchemy tools are not added when sqlalchemy parameter is not provided"""
+        mock_app = Mock()
+
+        middleware = Middleware(mock_app)
+        mcp_handler = middleware.get_mcp_handler()
+
+        # Check that middleware and handler were created
+        self.assertIsNotNone(middleware)
+        self.assertIsNotNone(mcp_handler)
+
+        # Check that basic tools are available
+        self.assertIn("project_eval", mcp_handler.tools)
+
+        # Check that SQLAlchemy tools are not available
+        self.assertNotIn("get_models", mcp_handler.tools)
+        self.assertNotIn("execute_sql_query", mcp_handler.tools)

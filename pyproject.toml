@@ -26,6 +26,7 @@ dev = [
   "django>=4.2",
   "fastapi>=0.100",
   "flask>=2",
+  "flask-sqlalchemy>=3.0",
   "pytest>=7",
   "ruff>=0.12.9",
   "sqlalchemy>=2.0",
