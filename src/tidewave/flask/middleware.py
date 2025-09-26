@@ -51,7 +51,7 @@ class Middleware:
 
     def __call__(self, environ: dict[str, Any], start_response: Callable):
         """WSGI application entry point - handle response headers modification"""
-        # Check if this is a Tidewave route
+
         if environ.get("PATH_INFO").startswith("/tidewave"):
             # For Tidewave routes, delegate directly to base middleware
             return self.middleware(environ, start_response)

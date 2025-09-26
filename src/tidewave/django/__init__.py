@@ -120,7 +120,7 @@ class Middleware:
         - None: Continue to the next middleware/view
         - HttpResponse: Short-circuit and return this response
         """
-        # Check if this is a Tidewave route
+
         if request.path.startswith("/tidewave"):
             response = self._handle_tidewave_request(request)
             if response:
