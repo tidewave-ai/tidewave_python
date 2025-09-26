@@ -37,10 +37,10 @@ class Middleware:
     def __call__(self, environ: dict[str, Any], start_response: Callable):
         """WSGI application entry point - handle response headers modification"""
         # Check if this is a Tidewave route
-        if environ.get('PATH_INFO').startswith('/tidewave'):
+        if environ.get("PATH_INFO").startswith("/tidewave"):
             # For Tidewave routes, delegate directly to base middleware
             return self.middleware(environ, start_response)
-        
+
         def custom_start_response(status, headers):
             return start_response(status, self.__proceess_header(headers))
 
@@ -57,10 +57,12 @@ class Middleware:
         - Add unsafe-eval to script-src in CSP if present
         - Remove frame-ancestors from CSP if present
         """
-        headers_dict = {name: value for name, value in headers}
-        if 'X-Frame-Options' in headers_dict:
-            del headers_dict['X-Frame-Options']
-        if 'Content-Security-Policy' in headers_dict:
-            headers_dict['Content-Security-Policy'] = modify_csp(headers_dict['Content-Security-Policy'])
+        headers_dict = dict(headers)
+        if "X-Frame-Options" in headers_dict:
+            del headers_dict["X-Frame-Options"]
+        if "Content-Security-Policy" in headers_dict:
+            headers_dict["Content-Security-Policy"] = modify_csp(
+                headers_dict["Content-Security-Policy"]
+            )
 
         return list(headers_dict.items())
