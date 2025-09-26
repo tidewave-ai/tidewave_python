@@ -5,6 +5,7 @@ Flask-specific middleware for Tidewave MCP integration
 from typing import Any, Callable, Optional
 
 from flask import current_app
+
 from tidewave import tools
 from tidewave.mcp_handler import MCPHandler
 from tidewave.middleware import Middleware as BaseMiddleware, modify_csp
@@ -21,6 +22,7 @@ class Middleware:
             config: Configuration dict with options:
                 - allow_remote_access: bool (default False) - whether to allow remote connections
                 - allowed_origins: list of allowed origin hosts (default [])
+                - team: Enable Tidewave for teams
         """
         self.app = app
 
