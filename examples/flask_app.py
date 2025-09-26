@@ -4,6 +4,7 @@ uv run python examples/flask_app.py
 # ruff: noqa: T201 -- allow print statements
 
 from flask import Flask, render_template
+
 from flask_sqlalchemy import SQLAlchemy
 
 from tidewave.flask import Middleware

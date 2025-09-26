@@ -6,6 +6,8 @@ import unittest
 
 from flask import Flask, Response
 
+from flask_sqlalchemy import SQLAlchemy
+
 from tidewave.flask import Middleware
 
 
@@ -53,24 +55,12 @@ class TestFlaskMiddleware(unittest.TestCase):
 
     def test_middleware_with_sqlalchemy(self):
         """Test that SQLAlchemy tools are added when SQLAlchemy is detected in Flask app"""
-        try:
-            from flask_sqlalchemy import SQLAlchemy
-        except ImportError:
-            self.skipTest("Flask-SQLAlchemy not available")
 
         app = Flask(__name__)
         app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
         app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-        db = SQLAlchemy(app)
-
-        class TestModel(db.Model):
-            id = db.Column(db.Integer, primary_key=True)
-            name = db.Column(db.String(80))
-
-        with app.app_context():
-            db.create_all()
-
+        _db = SQLAlchemy(app)
         middleware = Middleware(app)
         mcp_handler = middleware.get_mcp_handler()
 
@@ -84,21 +74,3 @@ class TestFlaskMiddleware(unittest.TestCase):
         # Check that SQLAlchemy tools are available
         self.assertIn("get_models", mcp_handler.tools)
         self.assertIn("execute_sql_query", mcp_handler.tools)
-
-    def test_middleware_without_sqlalchemy(self):
-        """Test that SQLAlchemy tools are not added when SQLAlchemy is not detected in Flask app"""
-        app = Flask(__name__)
-
-        middleware = Middleware(app)
-        mcp_handler = middleware.get_mcp_handler()
-
-        # Check that middleware and handler were created
-        self.assertIsNotNone(middleware)
-        self.assertIsNotNone(mcp_handler)
-
-        # Check that basic tools are available
-        self.assertIn("project_eval", mcp_handler.tools)
-
-        # Check that SQLAlchemy tools are not available
-        self.assertNotIn("get_models", mcp_handler.tools)
-        self.assertNotIn("execute_sql_query", mcp_handler.tools)

@@ -9,7 +9,7 @@ from flask import current_app
 from tidewave import tools
 from tidewave.mcp_handler import MCPHandler
 from tidewave.middleware import Middleware as BaseMiddleware, modify_csp
-from tidewave.sqlalchemy import get_models, execute_sql_query
+from tidewave.sqlalchemy import execute_sql_query, get_models
 
 
 class Middleware:
