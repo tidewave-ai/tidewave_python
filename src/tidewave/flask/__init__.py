@@ -31,7 +31,7 @@ class Middleware:
                 tools.project_eval,
             ]
         )
-
+        self.app = app
         self.middleware = BaseMiddleware(app, self.mcp_handler, self.config)
 
     def __call__(self, environ: dict[str, Any], start_response: Callable):
@@ -41,16 +41,20 @@ class Middleware:
             # For Tidewave routes, delegate directly to base middleware
             return self.middleware(environ, start_response)
 
-        def custom_start_response(status, headers):
-            return start_response(status, self.__proceess_header(headers))
-
-        return self.middleware(environ, custom_start_response)
+        return self._handle_normal_request(environ, start_response)
 
     def get_mcp_handler(self) -> MCPHandler:
         """Get the MCP handler instance for advanced usage"""
         return self.mcp_handler
 
-    def __proceess_header(self, headers):
+    def _handle_normal_request(self, environ, start_response):
+        """Handle normal requests - modify response headers"""
+        def handle_response(status, headers):
+            modified_headers = self._process_response(headers)
+            return start_response(status, modified_headers)
+        return self.app(environ, handle_response)
+
+    def _process_response(self, headers):
         """
         Modify headers to allow embedding in Tidewave:
         - Remove X-Frame-Options
