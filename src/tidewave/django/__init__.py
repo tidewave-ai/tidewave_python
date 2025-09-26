@@ -10,8 +10,9 @@ from django.conf import settings
 from django.http import HttpResponse
 from django.utils.log import CallbackFilter
 
-import tidewave.django.tools as django_tools
 import tidewave.tools as tidewave_tools
+from tidewave.django.models import get_models
+from tidewave.django.sql import execute_sql_query
 from tidewave.mcp_handler import MCPHandler
 from tidewave.middleware import Middleware as BaseMiddleware, modify_csp
 from tidewave.tools.get_logs import file_handler
@@ -53,8 +54,8 @@ class Middleware:
         # Create MCP handler with tools
         self.mcp_handler = MCPHandler(
             [
-                django_tools.execute_sql_query,
-                django_tools.get_models,
+                execute_sql_query,
+                get_models,
                 tidewave_tools.get_docs,
                 tidewave_tools.get_logs,
                 tidewave_tools.get_source_location,

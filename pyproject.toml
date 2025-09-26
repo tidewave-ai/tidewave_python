@@ -28,6 +28,7 @@ dev = [
   "flask>=2",
   "pytest>=7",
   "ruff>=0.12.9",
+  "sqlalchemy>=2.0",
   "uvicorn>=0.20",
 ]
 
