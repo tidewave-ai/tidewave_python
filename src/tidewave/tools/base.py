@@ -59,6 +59,7 @@ class MCPTool:
 
             param_type = type_hints[param_name]
 
+            # Handle default values
             if param.default == inspect.Parameter.empty:
                 if param_name in reserved_names:
                     fields[f"alias_{param_name}"] = (param_type, Field(alias=param_name))
@@ -80,25 +81,17 @@ class MCPTool:
         Generate JSON schema from the pydantic model, excluding hidden parameters
         """
         sig = inspect.signature(self.func)
-        schema = self.model.model_json_schema()
+        properties = self.model.model_json_schema()["properties"]
 
-        # Build required fields list, excluding hidden parameters
+        filtered_properties = {}
         required_fields = []
         for param_name, param in sig.parameters.items():
-            # Skip keyword-only parameters (hidden parameters after *)
-            if param.kind == inspect.Parameter.KEYWORD_ONLY:
-                continue
-            if param.default == inspect.Parameter.empty:
-                required_fields.append(param_name)
-
-        # Filter properties to exclude hidden parameters
-        filtered_properties = {}
-        for param_name, param in sig.parameters.items():
             if param.kind != inspect.Parameter.KEYWORD_ONLY:
-                if param_name in schema.get("properties", {}):
-                    filtered_properties[param_name] = schema["properties"][param_name]
+                filtered_properties[param_name] = properties.get(param_name)
 
-        # Convert to MCP format
+                if param.default == inspect.Parameter.empty:
+                    required_fields.append(param_name)
+
         return {
             "type": "object",
             "properties": filtered_properties,
