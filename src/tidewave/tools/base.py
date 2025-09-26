@@ -18,6 +18,7 @@ class MCPTool:
         self.func = func
         self.name = func.__name__
         self.description = self._get_description()
+        self.model = self._create_model()
         self.input_schema = self._generate_schema()
 
     def _get_description(self) -> str:
@@ -28,28 +29,23 @@ class MCPTool:
             return lines[0].strip()
         return f"Execute {self.name} function"
 
-    def _generate_schema(self) -> dict[str, Any]:
+    def _create_model(self):
         """
-        Generate JSON schema from function signature using pydantic, excluding hidden
-        parameters
+        Create pydantic model from function signature, including all parameters
+        (visible and hidden)
         """
         sig = inspect.signature(self.func)
         type_hints = get_type_hints(self.func)
 
-        # Build field definitions for pydantic model
         fields = {}
-        required_fields = []
-
         for param_name, param in sig.parameters.items():
-            # Skip keyword-only parameters (hidden parameters after *)
+            # For hidden parameters, ensure they have defaults
             if param.kind == inspect.Parameter.KEYWORD_ONLY:
-                # Hidden parameters must have default values
                 if param.default == inspect.Parameter.empty:
                     raise ValueError(
                         f"Hidden parameter '{param_name}' must have a default value. "
                         "Hidden parameters cannot be required."
                     )
-                continue
 
             # Require explicit type hints
             if param_name not in type_hints:
@@ -62,44 +58,47 @@ class MCPTool:
 
             # Handle default values
             if param.default == inspect.Parameter.empty:
-                # Required parameter
                 fields[param_name] = (param_type, ...)
-                required_fields.append(param_name)
             else:
-                # Optional parameter with default
                 fields[param_name] = (param_type, param.default)
 
-        # Create a temporary pydantic model
-        temp_model = create_model(f"{self.name}_params", **fields)
-        schema = temp_model.model_json_schema()
+        return create_model(f"{self.name}_model", **fields)
+
+    def _generate_schema(self) -> dict[str, Any]:
+        """
+        Generate JSON schema from the pydantic model, excluding hidden parameters
+        """
+        sig = inspect.signature(self.func)
+        schema = self.model.model_json_schema()
+
+        # Build required fields list, excluding hidden parameters
+        required_fields = []
+        for param_name, param in sig.parameters.items():
+            # Skip keyword-only parameters (hidden parameters after *)
+            if param.kind == inspect.Parameter.KEYWORD_ONLY:
+                continue
+            if param.default == inspect.Parameter.empty:
+                required_fields.append(param_name)
+
+        # Filter properties to exclude hidden parameters
+        filtered_properties = {}
+        for param_name, param in sig.parameters.items():
+            if param.kind != inspect.Parameter.KEYWORD_ONLY:
+                if param_name in schema.get("properties", {}):
+                    filtered_properties[param_name] = schema["properties"][param_name]
 
         # Convert to MCP format
         return {
             "type": "object",
-            "properties": schema.get("properties", {}),
+            "properties": filtered_properties,
             "required": required_fields,
         }
 
     def validate_and_call(self, args: dict[str, Any]) -> dict[str, Any]:
-        """Validate arguments using pydantic and call the function"""
+        """Validate arguments using the shared pydantic model and call the function"""
         try:
-            # Create validation model from schema
-            # - include ALL parameters (visible and hidden)
-            sig = inspect.signature(self.func)
-            type_hints = get_type_hints(self.func)
-
-            fields = {}
-            for param_name, param in sig.parameters.items():
-                param_type = type_hints.get(param_name, str)
-                if param.default == inspect.Parameter.empty:
-                    fields[param_name] = (param_type, ...)
-                else:
-                    fields[param_name] = (param_type, param.default)
-
-            validator_model = create_model(f"{self.name}_validator", **fields)
-
-            # Validate input
-            validated_args = validator_model(**args)
+            # Validate input using the shared model
+            validated_args = self.model(**args)
 
             # Call function with validated arguments
             result = self.func(**validated_args.model_dump())
