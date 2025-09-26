@@ -32,9 +32,7 @@ class TestFlaskMiddleware(unittest.TestCase):
 
     def create_middleware(self, wsgi_app):
         """Helper to create middleware with minimal config"""
-        mcp_handler = MCPHandler([])  # Empty tools for testing
-        config = {"framework_type": "flask", "project_name": "test"}
-        return Middleware(wsgi_app, mcp_handler, config)
+        return Middleware(wsgi_app)
 
     def test_headers_modified_for_normal_requests(self):
         """Test that response headers are modified for normal (non-tidewave) requests"""
@@ -96,29 +94,3 @@ class TestFlaskMiddleware(unittest.TestCase):
         self.assertEqual(headers_dict.get("Content-Type"), "text/html")
         self.assertNotIn("X-Frame-Options", headers_dict)
         self.assertNotIn("Content-Security-Policy", headers_dict)
-
-    def test_tidewave_requests_bypass_header_modification(self):
-        """Test that requests to /tidewave paths bypass header modification"""
-        middleware = self.create_middleware(self.simple_wsgi_app)
-
-        environ = {
-            "REQUEST_METHOD": "GET",
-            "PATH_INFO": "/tidewave/test",
-            "SERVER_NAME": "localhost",
-            "SERVER_PORT": "8000",
-        }
-
-        response_headers = []
-
-        def start_response(status, headers):
-            response_headers.extend(headers)
-            return lambda data: None
-
-        # This should delegate to the base middleware (wsgi_app in this case)
-        result = middleware(environ, start_response)
-        list(result)  # Consume the iterator
-
-        # Headers should be unmodified since it goes directly to wsgi_app
-        headers_dict = dict(response_headers)
-        self.assertIn("X-Frame-Options", headers_dict)
-        self.assertEqual(headers_dict["X-Frame-Options"], "DENY")

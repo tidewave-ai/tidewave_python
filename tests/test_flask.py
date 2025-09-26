@@ -30,7 +30,7 @@ class TestFlaskTidewave(unittest.TestCase):
         self.assertEqual(type(app.wsgi_app).__name__, "Middleware")
 
         # Verify tools
-        mcp_handler = app.wsgi_app.get_mcp_handler()
+        mcp_handler = app.wsgi_app.mcp_handler
         self.assertIn("project_eval", mcp_handler.tools)
 
         # Verify Jinja extension was added
@@ -87,7 +87,7 @@ class TestFlaskTidewave(unittest.TestCase):
         tidewave = Tidewave({})
         tidewave.init_app(app)
 
-        mcp_handler = app.wsgi_app.get_mcp_handler()
+        mcp_handler = app.wsgi_app.mcp_handler
         self.assertIn("project_eval", mcp_handler.tools)
         self.assertIn("get_models", mcp_handler.tools)
         self.assertIn("execute_sql_query", mcp_handler.tools)

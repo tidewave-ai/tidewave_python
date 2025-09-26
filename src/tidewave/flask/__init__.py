@@ -6,7 +6,7 @@ from tidewave import tools
 from tidewave.flask.middleware import Middleware
 from tidewave.jinja2 import Extension
 from tidewave.mcp_handler import MCPHandler
-from tidewave.middleware import Middleware as BaseMiddleware
+from tidewave.middleware import Middleware as MCPMiddleware
 from tidewave.sqlalchemy import execute_sql_query, get_models
 
 
@@ -60,9 +60,5 @@ class Tidewave:
                 "project_name": project_name,
             }
 
-            # Create base middleware
-            base_middleware = BaseMiddleware(app.wsgi_app, mcp_handler, middleware_config)
-
-            # Wrap with Flask-specific middleware
-            app.wsgi_app = Middleware(base_middleware, mcp_handler, middleware_config)
+            app.wsgi_app = MCPMiddleware(Middleware(app.wsgi_app), mcp_handler, middleware_config)
             app.jinja_env.add_extension(Extension)
