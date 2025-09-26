@@ -3,13 +3,11 @@ Tests for Django get_models tool
 """
 
 import re
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 from django.test import TestCase
 
-from tidewave.django.tools import get_models
-from tidewave.django.tools.models import _get_relative_source_location
+from tidewave.django.models import get_models
 
 
 class TestDjangoGetModels(TestCase):
@@ -71,9 +69,7 @@ class TestDjangoGetModels(TestCase):
             mock_models.append(mock_model)
 
         with patch("django.apps.apps.get_models") as mock_get_models:
-            with patch(
-                "tidewave.django.tools.models._get_relative_source_location"
-            ) as mock_location:
+            with patch("tidewave.tools.source.get_relative_source_location") as mock_location:
                 mock_get_models.return_value = mock_models
                 mock_location.return_value = "test.py:1"
 
@@ -84,63 +80,6 @@ class TestDjangoGetModels(TestCase):
                 self.assertIn("BetaModel", lines[1])
                 self.assertIn("ZebraModel", lines[2])
 
-    def test_get_relative_source_location_with_relative_path(self):
-        """Test _get_relative_source_location with a path that can be made relative."""
-
-        mock_model = Mock()
-
-        cwd = Path.cwd()
-        test_file = cwd / "myapp" / "models.py"
-
-        with patch("inspect.getsourcefile") as mock_getsourcefile:
-            with patch("inspect.getsourcelines") as mock_getsourcelines:
-                mock_getsourcefile.return_value = str(test_file)
-                mock_getsourcelines.return_value = ([], 42)
-
-                result = _get_relative_source_location(mock_model)
-
-                self.assertEqual(result, "myapp/models.py:42")
-
-    def test_get_relative_source_location_with_absolute_path(self):
-        """Test _get_relative_source_location with a path that cannot be made relative."""
-
-        mock_model = Mock()
-
-        absolute_path = "/usr/lib/python3.x/site-packages/django/contrib/auth/models.py"
-
-        with patch("inspect.getsourcefile") as mock_getsourcefile:
-            with patch("inspect.getsourcelines") as mock_getsourcelines:
-                mock_getsourcefile.return_value = absolute_path
-                mock_getsourcelines.return_value = ([], 123)
-
-                result = _get_relative_source_location(mock_model)
-
-                self.assertEqual(result, f"{absolute_path}:123")
-
-    def test_get_relative_source_location_with_no_source(self):
-        """Test _get_relative_source_location when source cannot be found."""
-
-        mock_model = Mock()
-
-        with patch("inspect.getsourcefile") as mock_getsourcefile:
-            mock_getsourcefile.return_value = None
-
-            result = _get_relative_source_location(mock_model)
-
-            self.assertIsNone(result)
-
-    def test_get_relative_source_location_with_inspect_error(self):
-        """Test _get_relative_source_location when inspect raises an error."""
-
-        mock_model = Mock()
-
-        with patch("inspect.getsourcefile") as mock_getsourcefile:
-            mock_getsourcefile.side_effect = OSError("Cannot get source file")
-
-            result = _get_relative_source_location(mock_model)
-
-            self.assertIsNone(result)
-
     def test_model_without_source_location(self):
         """Test handling of models that don't have source locations."""
         mock_model = Mock()
@@ -148,9 +87,7 @@ class TestDjangoGetModels(TestCase):
         mock_model._meta.abstract = False
 
         with patch("django.apps.apps.get_models") as mock_get_models:
-            with patch(
-                "tidewave.django.tools.models._get_relative_source_location"
-            ) as mock_location:
+            with patch("tidewave.tools.source.get_relative_source_location") as mock_location:
                 mock_get_models.return_value = [mock_model]
                 mock_location.return_value = None
 

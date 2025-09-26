@@ -4,7 +4,7 @@ Tests for Django execute_sql_query tool
 
 from django.test import TestCase
 
-from tidewave.django.tools import execute_sql_query
+from tidewave.django.sql import execute_sql_query
 
 
 class TestDjangoExecuteSqlQuery(TestCase):

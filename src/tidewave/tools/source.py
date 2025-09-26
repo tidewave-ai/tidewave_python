@@ -1,7 +1,9 @@
 import builtins
 import importlib
 import inspect
+import os
 import sys
+from pathlib import Path
 from typing import Any, Optional
 
 
@@ -31,18 +33,32 @@ def get_source_location(reference: str) -> str:
     if obj is None:
         raise NameError(f"could not find source location for {reference}")
 
+    location = get_relative_source_location(obj)
+
+    if location is None:
+        raise NameError(f"could not find source location for {reference}")
+
+    return location
+
+
+def get_relative_source_location(obj) -> Optional[str]:
     try:
-        file_path, line_number = (
-            inspect.getsourcefile(obj),
-            inspect.getsourcelines(obj)[1],
-        )
-        if file_path:
+        file_path = inspect.getsourcefile(obj)
+        line_number = inspect.getsourcelines(obj)[1]
+
+        if not file_path:
+            return None
+
+        try:
+            cwd = Path(os.getcwd())
+            file_path_obj = Path(file_path)
+            relative_path = file_path_obj.relative_to(cwd)
+            return f"{relative_path}:{line_number}"
+        except ValueError:
             return f"{file_path}:{line_number}"
-        else:
-            raise NameError(f"could not find source location for {reference}")
-    except (OSError, TypeError) as e:
-        # Some built-ins don't have source (like C extensions)
-        raise NameError(f"could not find source location for {reference}") from e
+
+    except (OSError, TypeError, AttributeError):
+        return None
 
 
 def get_docs(reference: str) -> str:
