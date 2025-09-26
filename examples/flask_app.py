@@ -54,6 +54,8 @@ def create_app():
 def main():
     """Run the Flask app with MCP middleware"""
     app = create_app()
+    app.debug = True
+
     tidewave = Tidewave()
     tidewave.init_app(app)
 
