@@ -130,3 +130,23 @@ class TestGetLogs(unittest.TestCase):
 
         self.assertIn(f"REGEX_TEST_2023-01-01_{timestamp}", result)
         self.assertIn(f"REGEX_TEST_2023-01-02_{timestamp}", result)
+
+    def test_get_logs_removes_ansi_escape_sequences(self):
+        """Test that ANSI escape sequences are stripped from log messages."""
+        timestamp = int(time.time() * 1000)
+
+        # Create a message with various ANSI escape sequences
+        # \x1b[31m = red text, \x1b[1m = bold, \x1b[0m = reset
+        ansi_message = f"ANSI_TEST_{timestamp}_\x1b[31mRED_TEXT\x1b[0m_\x1b[1mBOLD_TEXT\x1b[0m"
+        expected_clean_message = f"ANSI_TEST_{timestamp}_RED_TEXT_BOLD_TEXT"
+
+        self.test_logger.info(ansi_message)
+
+        result = get_logs(tail=50)
+
+        # Verify the clean message is present
+        self.assertIn(expected_clean_message, result)
+        # Verify ANSI escape sequences are not present
+        self.assertNotIn("\x1b[31m", result)
+        self.assertNotIn("\x1b[1m", result)
+        self.assertNotIn("\x1b[0m", result)
