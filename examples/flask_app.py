@@ -45,17 +45,17 @@ def create_app():
             message="Welcome to Flask with Jinja2 template debugging and SQLAlchemy integration!",
         )
 
-    return app, db
+    return app
 
 
 def main():
     """Run the Flask app with MCP middleware"""
-    flask_app, db = create_app()
-    app_with_mcp = Middleware(flask_app, sqlalchemy=db)
+    flask_app = create_app()
+    app_with_mcp = Middleware(flask_app)
 
     print("Starting Flask server on http://localhost:8000")
     print("Try sending MCP requests to http://localhost:8000/tidewave/mcp")
-    print("SQLAlchemy tools (get_models, execute_sql_query) are available")
+    print("SQLAlchemy tools (get_models, execute_sql_query) are auto-detected and available")
     print("Press Ctrl+C to stop")
 
     from wsgiref.simple_server import make_server

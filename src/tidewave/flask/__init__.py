@@ -15,20 +15,18 @@ from tidewave.sqlalchemy import get_models, execute_sql_query
 class Middleware:
     """Flask-specific middleware that handles MCP handler initialization and routing"""
 
-    def __init__(self, app: Callable, config: Optional[dict[str, Any]] = None, sqlalchemy=None):
-        """Initialize Flask middleware with MCP handler
+    def __init__(self, app: Callable, config: Optional[dict[str, Any]] = None):
+        """Build a Flask middleware with MCP handler
 
         Args:
-            app: Flask WSGI application to wrap
+            app: Flask application instance
             config: Configuration dict with options:
                 - allow_remote_access: bool (default False) - whether to allow remote connections
                 - allowed_origins: list of allowed origin hosts (default [])
                 - team: Enable Tidewave for teams
-            sqlalchemy: Optional SQLAlchemy instance (result of SQLAlchemy(app))
         """
-        self.app = app
+        self.wsgi_app = app.wsgi_app
 
-        # Initialize base tools
         mcp_tools = [
             tools.get_docs,
             tools.get_logs,
@@ -36,14 +34,15 @@ class Middleware:
             tools.project_eval,
         ]
 
-        # Add SQLAlchemy tools if provided
-        if sqlalchemy is not None:
-            mcp_tools.extend(
-                [
-                    get_models(sqlalchemy.Model),
-                    execute_sql_query(sqlalchemy.engine),
-                ]
-            )
+        if "sqlalchemy" in app.extensions:
+            with app.app_context():
+                db = app.extensions["sqlalchemy"]
+                mcp_tools.extend(
+                    [
+                        get_models(db.Model),
+                        execute_sql_query(db.engine),
+                    ]
+                )
 
         self.mcp_handler = MCPHandler(mcp_tools)
 
@@ -59,7 +58,7 @@ class Middleware:
             "project_name": project_name,
         }
 
-        self.middleware = BaseMiddleware(app, self.mcp_handler, config)
+        self.middleware = BaseMiddleware(self.wsgi_app, self.mcp_handler, config)
 
     def __call__(self, environ: dict[str, Any], start_response: Callable):
         """WSGI application entry point - handle response headers modification"""
@@ -81,7 +80,7 @@ class Middleware:
             modified_headers = self._process_response(headers)
             return start_response(status, modified_headers)
 
-        return self.app(environ, handle_response)
+        return self.wsgi_app(environ, handle_response)
 
     def _process_response(self, headers):
         """

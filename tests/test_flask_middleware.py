@@ -3,7 +3,6 @@ Basic tests for Flask middleware
 """
 
 import unittest
-from unittest.mock import Mock
 
 from flask import Flask, Response
 
@@ -13,15 +12,12 @@ from tidewave.flask import Middleware
 class TestFlaskMiddleware(unittest.TestCase):
     """Test Flask middleware initialization and basic functionality"""
 
-    def setUp(self):
-        self.app = Flask(__name__)
-
     def test_middleware_initialization_and_tools(self):
         """Test that Flask middleware initializes properly and has expected tools"""
-        mock_app = Mock()
+        app = Flask(__name__)
         config = {"debug": True}
 
-        middleware = Middleware(mock_app, config)
+        middleware = Middleware(app, config)
         mcp_handler = middleware.get_mcp_handler()
 
         # Check that middleware and handler were created
@@ -33,8 +29,9 @@ class TestFlaskMiddleware(unittest.TestCase):
 
     def test_flask_response_headers_modified(self):
         """Test that Flask response headers are modified by middleware"""
+        app = Flask(__name__)
 
-        @self.app.route("/flask/path")
+        @app.route("/flask/path")
         def flask_path():
             resp = Response("Flask response")
             resp.headers["X-Frame-Options"] = "DENY"
@@ -43,9 +40,9 @@ class TestFlaskMiddleware(unittest.TestCase):
             )
             return resp
 
-        self.app.wsgi_app = Middleware(self.app.wsgi_app)
+        app.wsgi_app = Middleware(app)
 
-        with self.app.test_client() as client:
+        with app.test_client() as client:
             response = client.get("/flask/path")
 
             csp_value = response.headers.get("Content-Security-Policy", "")
@@ -55,13 +52,26 @@ class TestFlaskMiddleware(unittest.TestCase):
             self.assertIn("default-src 'none'", csp_value)
 
     def test_middleware_with_sqlalchemy(self):
-        """Test that SQLAlchemy tools are added when sqlalchemy parameter is provided"""
-        mock_app = Mock()
-        mock_sqlalchemy = Mock()
-        mock_sqlalchemy.Model = Mock()
-        mock_sqlalchemy.engine = Mock()
+        """Test that SQLAlchemy tools are added when SQLAlchemy is detected in Flask app"""
+        try:
+            from flask_sqlalchemy import SQLAlchemy
+        except ImportError:
+            self.skipTest("Flask-SQLAlchemy not available")
 
-        middleware = Middleware(mock_app, sqlalchemy=mock_sqlalchemy)
+        app = Flask(__name__)
+        app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
+        app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+        db = SQLAlchemy(app)
+
+        class TestModel(db.Model):
+            id = db.Column(db.Integer, primary_key=True)
+            name = db.Column(db.String(80))
+
+        with app.app_context():
+            db.create_all()
+
+        middleware = Middleware(app)
         mcp_handler = middleware.get_mcp_handler()
 
         # Check that middleware and handler were created
@@ -76,10 +86,10 @@ class TestFlaskMiddleware(unittest.TestCase):
         self.assertIn("execute_sql_query", mcp_handler.tools)
 
     def test_middleware_without_sqlalchemy(self):
-        """Test that SQLAlchemy tools are not added when sqlalchemy parameter is not provided"""
-        mock_app = Mock()
+        """Test that SQLAlchemy tools are not added when SQLAlchemy is not detected in Flask app"""
+        app = Flask(__name__)
 
-        middleware = Middleware(mock_app)
+        middleware = Middleware(app)
         mcp_handler = middleware.get_mcp_handler()
 
         # Check that middleware and handler were created
