@@ -4,57 +4,22 @@ Flask-specific middleware for Tidewave MCP integration
 
 from typing import Any, Callable
 
-from flask import current_app
-
-from tidewave import tools
 from tidewave.mcp_handler import MCPHandler
-from tidewave.middleware import Middleware as BaseMiddleware, modify_csp
-from tidewave.sqlalchemy import execute_sql_query, get_models
+from tidewave.middleware import modify_csp
 
 
 class Middleware:
-    def __init__(self, app, config: dict[str, Any]):
-        self.wsgi_app = app.wsgi_app
-
-        mcp_tools = [
-            tools.get_docs,
-            tools.get_logs,
-            tools.get_source_location,
-            tools.project_eval,
-        ]
-
-        if "sqlalchemy" in app.extensions:
-            with app.app_context():
-                db = app.extensions["sqlalchemy"]
-                mcp_tools.extend(
-                    [
-                        get_models(db.Model),
-                        execute_sql_query(db.engine),
-                    ]
-                )
-
-        self.mcp_handler = MCPHandler(mcp_tools)
-
-        project_name = "flask_app"
-        try:
-            project_name = current_app.name
-        except RuntimeError:
-            pass
-
-        config = {
-            **config,
-            "framework_type": "flask",
-            "project_name": project_name,
-        }
-
-        self.middleware = BaseMiddleware(self.wsgi_app, self.mcp_handler, config)
+    def __init__(self, wsgi_app: Callable, mcp_handler: MCPHandler, config: dict[str, Any]):
+        self.wsgi_app = wsgi_app
+        self.mcp_handler = mcp_handler
+        self.config = config
 
     def __call__(self, environ: dict[str, Any], start_response: Callable):
         """WSGI application entry point - handle response headers modification"""
 
         if environ.get("PATH_INFO").startswith("/tidewave"):
             # For Tidewave routes, delegate directly to base middleware
-            return self.middleware(environ, start_response)
+            return self.wsgi_app(environ, start_response)
 
         return self._handle_normal_request(environ, start_response)
 
