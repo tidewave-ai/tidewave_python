@@ -91,11 +91,6 @@ class Middleware:
         if not allowed_hosts and debug:
             allowed_hosts = [".localhost", "127.0.0.1", "::1"]
 
-        tidewave_settings = getattr(settings, "TIDEWAVE", {})
-        allow_remote_access = tidewave_settings.get("allow_remote_access", False)
-        client_url = tidewave_settings.get("client_url", "https://tidewave.ai")
-        team = tidewave_settings.get("team", {})
-
         project_name = "django_app"
         try:
             project_name = settings.SETTINGS_MODULE.split(".")[0]
@@ -103,12 +98,10 @@ class Middleware:
             pass
 
         config = {
+            **getattr(settings, "TIDEWAVE", {}),
+            "allowed_origins": allowed_hosts,
             "framework_type": "django",
             "project_name": project_name,
-            "client_url": client_url,
-            "allow_remote_access": allow_remote_access,
-            "allowed_origins": allowed_hosts,
-            "team": team,
         }
 
         return config

@@ -4,6 +4,7 @@ Flask-specific middleware for Tidewave MCP integration
 
 from typing import Any, Callable, Optional
 
+from flask import current_app
 from tidewave import tools
 from tidewave.mcp_handler import MCPHandler
 from tidewave.middleware import Middleware as BaseMiddleware, modify_csp
@@ -21,7 +22,7 @@ class Middleware:
                 - allow_remote_access: bool (default False) - whether to allow remote connections
                 - allowed_origins: list of allowed origin hosts (default [])
         """
-        self.config = config or {}
+        self.app = app
 
         self.mcp_handler = MCPHandler(
             [
@@ -31,8 +32,20 @@ class Middleware:
                 tools.project_eval,
             ]
         )
-        self.app = app
-        self.middleware = BaseMiddleware(app, self.mcp_handler, self.config)
+
+        project_name = "flask_app"
+        try:
+            project_name = current_app.name
+        except RuntimeError:
+            pass
+
+        config = {
+            **(config or {}),
+            "framework_type": "flask",
+            "project_name": project_name,
+        }
+
+        self.middleware = BaseMiddleware(app, self.mcp_handler, config)
 
     def __call__(self, environ: dict[str, Any], start_response: Callable):
         """WSGI application entry point - handle response headers modification"""
