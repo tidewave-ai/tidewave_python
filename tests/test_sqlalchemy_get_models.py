@@ -5,7 +5,7 @@ Tests for SQLAlchemy get_models tool
 import inspect
 import pytest
 
-from tidewave.sqlalchemy.models import get_models
+from tidewave.sqlalchemy import get_models
 
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import DeclarativeBase
