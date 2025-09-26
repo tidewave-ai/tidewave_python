@@ -19,9 +19,6 @@ class Tidewave:
                 - allowed_origins: list of allowed origin hosts (default [])
                 - team: Enable Tidewave for teams
         """
-        if config is not None:
-            self.config = config
-
         if app.debug:
             app.wsgi_app = Middleware(app, config or {})
             app.jinja_env.add_extension(Extension)
