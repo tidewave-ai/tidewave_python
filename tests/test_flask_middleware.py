@@ -60,7 +60,9 @@ class TestFlaskMiddleware(unittest.TestCase):
         app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
         app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-        _db = SQLAlchemy(app)
+        db = SQLAlchemy()
+        db.init_app(app)
+
         middleware = Middleware(app)
         mcp_handler = middleware.get_mcp_handler()
 

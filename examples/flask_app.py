@@ -6,9 +6,14 @@ uv run python examples/flask_app.py
 from flask import Flask, render_template
 
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import DeclarativeBase
 
 from tidewave.flask import Middleware
 from tidewave.jinja2 import Extension as TidewaveJinjaExtension
+
+
+class Base(DeclarativeBase):
+    pass
 
 
 def create_app():
@@ -20,7 +25,8 @@ def create_app():
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     # Initialize SQLAlchemy
-    db = SQLAlchemy(app)
+    db = SQLAlchemy(model_class=Base)
+    db.init_app(app)
 
     # Define a sample model
     class User(db.Model):
