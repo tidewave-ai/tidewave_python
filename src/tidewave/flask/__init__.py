@@ -7,7 +7,6 @@ from tidewave.flask.middleware import Middleware
 from tidewave.jinja2 import Extension
 from tidewave.mcp_handler import MCPHandler
 from tidewave.middleware import Middleware as MCPMiddleware
-from tidewave.sqlalchemy import execute_sql_query, get_models
 
 
 class Tidewave:
@@ -34,6 +33,8 @@ class Tidewave:
 
             # Add SQLAlchemy tools if available
             if "sqlalchemy" in app.extensions:
+                from tidewave.sqlalchemy import execute_sql_query, get_models
+
                 with app.app_context():
                     db = app.extensions["sqlalchemy"]
                     mcp_tools.extend(
