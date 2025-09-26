@@ -5,7 +5,6 @@ Tests for Flask middleware header modification functionality
 import unittest
 
 from tidewave.flask.middleware import Middleware
-from tidewave.mcp_handler import MCPHandler
 
 
 class TestFlaskMiddleware(unittest.TestCase):
@@ -55,7 +54,6 @@ class TestFlaskMiddleware(unittest.TestCase):
         result = middleware(environ, start_response)
         list(result)  # Consume the iterator
 
-        # Convert headers to dict for easier testing
         headers_dict = dict(response_headers)
 
         # X-Frame-Options should be removed
@@ -87,7 +85,6 @@ class TestFlaskMiddleware(unittest.TestCase):
         result = middleware(environ, start_response)
         list(result)  # Consume the iterator
 
-        # Convert headers to dict for easier testing
         headers_dict = dict(response_headers)
 
         # Should only have Content-Type, no security headers added

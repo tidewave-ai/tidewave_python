@@ -3,6 +3,7 @@ Flask-specific middleware for dealing with CSP/frame headers.
 """
 
 from typing import Any, Callable
+
 from tidewave.middleware import modify_csp
 
 
