@@ -49,9 +49,11 @@ class Middleware:
 
     def _handle_normal_request(self, environ, start_response):
         """Handle normal requests - modify response headers"""
+
         def handle_response(status, headers):
             modified_headers = self._process_response(headers)
             return start_response(status, modified_headers)
+
         return self.app(environ, handle_response)
 
     def _process_response(self, headers):
