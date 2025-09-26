@@ -1,22 +1,16 @@
-"""
-Flask-specific middleware for Tidewave MCP integration
-"""
-
-from typing import Any, Callable, Optional
-
-from flask import current_app
-
-from tidewave import tools
-from tidewave.mcp_handler import MCPHandler
-from tidewave.middleware import Middleware as BaseMiddleware, modify_csp
-from tidewave.sqlalchemy import execute_sql_query, get_models
+from typing import Any, Optional
+from tidewave.flask.middleware import Middleware
+from tidewave.jinja2 import Extension
 
 
-class Middleware:
-    """Flask-specific middleware that handles MCP handler initialization and routing"""
+class Tidewave:
+    """Tidewave-Flask integration class."""
 
-    def __init__(self, app: Callable, config: Optional[dict[str, Any]] = None):
-        """Build a Flask middleware with MCP handler
+    def __init__(self):
+        pass
+
+    def init_app(self, app, config: Optional[dict[str, Any]] = None):
+        """Initialize Tidewave with a Flask application.
 
         Args:
             app: Flask application instance
@@ -25,76 +19,9 @@ class Middleware:
                 - allowed_origins: list of allowed origin hosts (default [])
                 - team: Enable Tidewave for teams
         """
-        self.wsgi_app = app.wsgi_app
+        if config is not None:
+            self.config = config
 
-        mcp_tools = [
-            tools.get_docs,
-            tools.get_logs,
-            tools.get_source_location,
-            tools.project_eval,
-        ]
-
-        if "sqlalchemy" in app.extensions:
-            with app.app_context():
-                db = app.extensions["sqlalchemy"]
-                mcp_tools.extend(
-                    [
-                        get_models(db.Model),
-                        execute_sql_query(db.engine),
-                    ]
-                )
-
-        self.mcp_handler = MCPHandler(mcp_tools)
-
-        project_name = "flask_app"
-        try:
-            project_name = current_app.name
-        except RuntimeError:
-            pass
-
-        config = {
-            **(config or {}),
-            "framework_type": "flask",
-            "project_name": project_name,
-        }
-
-        self.middleware = BaseMiddleware(self.wsgi_app, self.mcp_handler, config)
-
-    def __call__(self, environ: dict[str, Any], start_response: Callable):
-        """WSGI application entry point - handle response headers modification"""
-        # Check if this is a Tidewave route
-        if environ.get("PATH_INFO").startswith("/tidewave"):
-            # For Tidewave routes, delegate directly to base middleware
-            return self.middleware(environ, start_response)
-
-        return self._handle_normal_request(environ, start_response)
-
-    def get_mcp_handler(self) -> MCPHandler:
-        """Get the MCP handler instance for advanced usage"""
-        return self.mcp_handler
-
-    def _handle_normal_request(self, environ, start_response):
-        """Handle normal requests - modify response headers"""
-
-        def handle_response(status, headers):
-            modified_headers = self._process_response(headers)
-            return start_response(status, modified_headers)
-
-        return self.wsgi_app(environ, handle_response)
-
-    def _process_response(self, headers):
-        """
-        Modify headers to allow embedding in Tidewave:
-        - Remove X-Frame-Options
-        - Add unsafe-eval to script-src in CSP if present
-        - Remove frame-ancestors from CSP if present
-        """
-        headers_dict = dict(headers)
-        if "X-Frame-Options" in headers_dict:
-            del headers_dict["X-Frame-Options"]
-        if "Content-Security-Policy" in headers_dict:
-            headers_dict["Content-Security-Policy"] = modify_csp(
-                headers_dict["Content-Security-Policy"]
-            )
-
-        return list(headers_dict.items())
+        if app.debug:
+            app.wsgi_app = Middleware(app, config or {})
+            app.jinja_env.add_extension(Extension)

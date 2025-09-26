@@ -8,8 +8,7 @@ from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 
-from tidewave.flask import Middleware
-from tidewave.jinja2 import Extension as TidewaveJinjaExtension
+from tidewave.flask import Tidewave
 
 
 class Base(DeclarativeBase):
@@ -37,12 +36,9 @@ def create_app():
         def __repr__(self):
             return f"<User {self.name}>"
 
-    # Create tables and add sample data
+    # Create tables
     with app.app_context():
         db.create_all()
-
-    # Configure Jinja2 with Tidewave extension
-    app.jinja_env.add_extension(TidewaveJinjaExtension)
 
     @app.route("/")
     def home():
@@ -58,7 +54,8 @@ def create_app():
 def main():
     """Run the Flask app with MCP middleware"""
     app = create_app()
-    app.wsgi_app = Middleware(app)
+    tidewave = Tidewave()
+    tidewave.init_app(app)
 
     print("Starting Flask server on http://localhost:8000")
     print("Try sending MCP requests to http://localhost:8000/tidewave/mcp")

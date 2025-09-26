@@ -8,7 +8,7 @@ from flask import Flask, Response
 
 from flask_sqlalchemy import SQLAlchemy
 
-from tidewave.flask import Middleware
+from tidewave.flask.middleware import Middleware
 
 
 class TestFlaskMiddleware(unittest.TestCase):
@@ -42,7 +42,7 @@ class TestFlaskMiddleware(unittest.TestCase):
             )
             return resp
 
-        app.wsgi_app = Middleware(app)
+        app.wsgi_app = Middleware(app, {})
 
         with app.test_client() as client:
             response = client.get("/flask/path")
@@ -63,7 +63,7 @@ class TestFlaskMiddleware(unittest.TestCase):
         db = SQLAlchemy()
         db.init_app(app)
 
-        middleware = Middleware(app)
+        middleware = Middleware(app, {})
         mcp_handler = middleware.get_mcp_handler()
 
         # Check that middleware and handler were created
