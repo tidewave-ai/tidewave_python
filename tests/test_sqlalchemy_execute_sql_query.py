@@ -5,7 +5,7 @@ Tests for SQLAlchemy execute_sql_query tool
 import pytest
 from sqlalchemy import create_engine
 
-from tidewave.sqlalchemy.sql import get_execute_sql_query
+from tidewave.sqlalchemy import execute_sql_query as esq
 
 
 @pytest.fixture
@@ -17,7 +17,7 @@ def engine():
 @pytest.fixture
 def execute_sql_query(engine):
     """Create the execute_sql_query function with the test engine."""
-    return get_execute_sql_query(engine)
+    return esq(engine)
 
 
 def test_execute_simple_select_query(execute_sql_query):
@@ -66,7 +66,7 @@ def test_execute_query_result_limit(execute_sql_query):
 
 def test_execute_query_with_invalid_sql(execute_sql_query):
     """Test executing an invalid SQL query."""
-    with pytest.raises(Exception):
+    with pytest.raises(NameError):  # noqa: B017
         execute_sql_query("INVALID SQL QUERY")
 
 

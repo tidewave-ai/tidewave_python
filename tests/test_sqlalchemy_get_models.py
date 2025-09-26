@@ -3,12 +3,11 @@ Tests for SQLAlchemy get_models tool
 """
 
 import inspect
-import pytest
-
-from tidewave.sqlalchemy import get_models
 
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import DeclarativeBase
+
+from tidewave.sqlalchemy import get_models
 
 
 class TestSQLAlchemyGetModels:

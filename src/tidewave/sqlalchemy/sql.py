@@ -1,12 +1,11 @@
 from typing import Any, Callable, Optional
 
-
 from sqlalchemy.engine import Engine
 
 LIMIT = 50
 
 
-def get_execute_sql_query(engine: Engine) -> Callable[[str, Optional[list[Any]]], str]:
+def execute_sql_query(engine: Engine) -> Callable[[str, Optional[list[Any]]], str]:
     def execute_sql_query(query: str, arguments: Optional[list[Any]] = None) -> str:
         """
         Executes the given SQL query using SQLAlchemy engine.
