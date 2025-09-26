@@ -1,55 +1,93 @@
 """
-Basic tests for Flask middleware
+Tests for Flask middleware header modification functionality
 """
 
 import unittest
-from unittest.mock import Mock
 
-from flask import Flask, Response
-
-from tidewave.flask import Middleware
+from tidewave.flask.middleware import Middleware
 
 
 class TestFlaskMiddleware(unittest.TestCase):
-    """Test Flask middleware initialization and basic functionality"""
+    """Test Flask middleware header modification functionality"""
 
-    def setUp(self):
-        self.app = Flask(__name__)
+    def simple_wsgi_app(self, environ, start_response):
+        """Simple WSGI app that returns headers we want to test"""
+        headers = [
+            ("Content-Type", "text/html"),
+            ("X-Frame-Options", "DENY"),
+            (
+                "Content-Security-Policy",
+                "default-src 'none'; script-src 'self'; frame-ancestors 'none'",
+            ),
+        ]
+        start_response("200 OK", headers)
+        return [b"Hello World"]
 
-    def test_middleware_initialization_and_tools(self):
-        """Test that Flask middleware initializes properly and has expected tools"""
-        mock_app = Mock()
-        config = {"debug": True}
+    def simple_wsgi_app_no_headers(self, environ, start_response):
+        """Simple WSGI app without security headers"""
+        headers = [("Content-Type", "text/html")]
+        start_response("200 OK", headers)
+        return [b"Hello World"]
 
-        middleware = Middleware(mock_app, config)
-        mcp_handler = middleware.get_mcp_handler()
+    def create_middleware(self, wsgi_app):
+        """Helper to create middleware with minimal config"""
+        return Middleware(wsgi_app)
 
-        # Check that middleware and handler were created
-        self.assertIsNotNone(middleware)
-        self.assertIsNotNone(mcp_handler)
+    def test_headers_modified_for_normal_requests(self):
+        """Test that response headers are modified for normal (non-tidewave) requests"""
+        middleware = self.create_middleware(self.simple_wsgi_app)
 
-        # Check that specific tools are available
-        self.assertIn("project_eval", mcp_handler.tools)
+        environ = {
+            "REQUEST_METHOD": "GET",
+            "PATH_INFO": "/test",
+            "SERVER_NAME": "localhost",
+            "SERVER_PORT": "8000",
+        }
 
-    def test_flask_response_headers_modified(self):
-        """Test that Flask response headers are modified by middleware"""
+        response_data = []
+        response_headers = []
 
-        @self.app.route("/flask/path")
-        def flask_path():
-            resp = Response("Flask response")
-            resp.headers["X-Frame-Options"] = "DENY"
-            resp.headers["Content-Security-Policy"] = (
-                "default-src 'none'; script-src 'self'; frame-ancestors 'none'"
-            )
-            return resp
+        def start_response(status, headers):
+            response_headers.extend(headers)
+            return lambda data: response_data.append(data)
 
-        self.app.wsgi_app = Middleware(self.app.wsgi_app)
+        result = middleware(environ, start_response)
+        list(result)  # Consume the iterator
 
-        with self.app.test_client() as client:
-            response = client.get("/flask/path")
+        headers_dict = dict(response_headers)
 
-            csp_value = response.headers.get("Content-Security-Policy", "")
-            self.assertNotIn("X-Frame-Options", response.headers)
-            self.assertIn("script-src 'self' 'unsafe-eval'", csp_value)
-            self.assertNotIn("frame-ancestors", csp_value)
-            self.assertIn("default-src 'none'", csp_value)
+        # X-Frame-Options should be removed
+        self.assertNotIn("X-Frame-Options", headers_dict)
+
+        # CSP should be modified to include unsafe-eval and remove frame-ancestors
+        csp = headers_dict.get("Content-Security-Policy", "")
+        self.assertIn("script-src 'self' 'unsafe-eval'", csp)
+        self.assertNotIn("frame-ancestors", csp)
+        self.assertIn("default-src 'none'", csp)
+
+    def test_headers_not_modified_when_not_present(self):
+        """Test that headers are not added if they weren't present originally"""
+        middleware = self.create_middleware(self.simple_wsgi_app_no_headers)
+
+        environ = {
+            "REQUEST_METHOD": "GET",
+            "PATH_INFO": "/test",
+            "SERVER_NAME": "localhost",
+            "SERVER_PORT": "8000",
+        }
+
+        response_headers = []
+
+        def start_response(status, headers):
+            response_headers.extend(headers)
+            return lambda data: None
+
+        result = middleware(environ, start_response)
+        list(result)  # Consume the iterator
+
+        headers_dict = dict(response_headers)
+
+        # Should only have Content-Type, no security headers added
+        self.assertEqual(headers_dict.get("Content-Type"), "text/html")
+        self.assertNotIn("X-Frame-Options", headers_dict)
+        self.assertNotIn("Content-Security-Policy", headers_dict)

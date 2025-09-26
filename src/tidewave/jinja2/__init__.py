@@ -74,11 +74,7 @@ class TemplateAnnotationExtension(Extension):
             return body
 
         filename_value = template_filename.as_const()
-
-        # Wrap blocks with annotations
         body = self._wrap_blocks_with_annotations(body, filename_value)
-
-        # Check if this template has an extends node
         has_extends = self._has_extends_node(body)
 
         if has_extends:
