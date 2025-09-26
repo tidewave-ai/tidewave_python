@@ -57,8 +57,8 @@ def create_app():
 
 def main():
     """Run the Flask app with MCP middleware"""
-    flask_app = create_app()
-    app_with_mcp = Middleware(flask_app)
+    app = create_app()
+    app.wsgi_app = Middleware(app)
 
     print("Starting Flask server on http://localhost:8000")
     print("Try sending MCP requests to http://localhost:8000/tidewave/mcp")
@@ -67,7 +67,7 @@ def main():
 
     from wsgiref.simple_server import make_server
 
-    server = make_server("localhost", 8000, app_with_mcp)
+    server = make_server("localhost", 8000, app)
 
     try:
         server.serve_forever()
