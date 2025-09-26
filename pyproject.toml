@@ -20,17 +20,23 @@ dependencies = [ "pydantic>=2" ]
 
 [project.optional-dependencies]
 django = ["django>=4.2"]
+flask = ["flask>=2"]
+sqlalchemy = ["sqlalchemy>=2.0"]
 
 [dependency-groups]
 dev = [
   "django>=4.2",
   "fastapi>=0.100",
   "flask>=2",
+  "sqlalchemy>=2.0",
+
+  # Used in example apps
   "flask-sqlalchemy>=3.0",
+  "uvicorn>=0.20",
+
+  # Used in dev/tests
   "pytest>=7",
   "ruff>=0.12.9",
-  "sqlalchemy>=2.0",
-  "uvicorn>=0.20",
 ]
 
 [tool.ruff]

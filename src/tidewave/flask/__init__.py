@@ -1,4 +1,5 @@
 from typing import Any, Optional
+
 from tidewave.flask.middleware import Middleware
 from tidewave.jinja2 import Extension
 
