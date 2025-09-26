@@ -2,6 +2,7 @@
 Tests for SQLAlchemy get_models tool
 """
 
+import inspect
 import pytest
 
 from tidewave.sqlalchemy.models import get_models
@@ -100,5 +101,7 @@ class TestSQLAlchemyGetModels:
         discover_function = get_models(Base)
         result = discover_function()
 
-        assert "LocationTest at " in result
-        assert ".py:" in result
+        # Should include the specific test file name and line number
+        expected_line = inspect.getsourcelines(LocationTest)[1]
+        assert "LocationTest at tests/test_sqlalchemy_get_models.py:" in result
+        assert str(expected_line) in result
