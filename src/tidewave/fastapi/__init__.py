@@ -11,6 +11,7 @@ from starlette.middleware.wsgi import WSGIMiddleware
 
 import __main__
 from tidewave import tools
+from tidewave.fastapi.middleware import Middleware as HeadersMiddleware
 from tidewave.mcp_handler import MCPHandler
 from tidewave.middleware import Middleware
 
@@ -57,3 +58,4 @@ def mount(app: FastAPI, config: Optional[dict[str, Any]] = None):
     middleware = Middleware(wsgi_app, mcp_handler, config)
 
     app.mount("/tidewave", WSGIMiddleware(middleware))
+    app.add_middleware(HeadersMiddleware)
