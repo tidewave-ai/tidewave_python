@@ -10,18 +10,13 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from tidewave.fastapi import mount
+from tidewave.fastapi import Tidewave
 from tidewave.jinja2 import Extension as TidewaveJinjaExtension
 
 
 def create_app():
     """Create a FastAPI app with mounted WSGI middleware"""
     app = FastAPI(title="FastAPI + Tidewave MCP")
-
-    # Configure Jinja2 templates with Tidewave extension
-    templates_dir = Path(__file__).parent / "templates"
-    templates = Jinja2Templates(directory=str(templates_dir))
-    templates.env.add_extension(TidewaveJinjaExtension)
 
     @app.get("/", response_class=HTMLResponse)
     async def fastapi_endpoint(request: Request):
@@ -34,7 +29,14 @@ def create_app():
             },
         )
 
-    mount(app)
+    tidewave = Tidewave()
+    tidewave.install(app)
+
+    # Configure Jinja2 templates with Tidewave extension
+    templates_dir = Path(__file__).parent / "templates"
+    templates = Jinja2Templates(directory=str(templates_dir))
+    templates.env.add_extension(TidewaveJinjaExtension)
+
     return app
 
 

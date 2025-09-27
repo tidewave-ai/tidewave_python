@@ -96,8 +96,8 @@ class TestFlaskTidewave(unittest.TestCase):
         self.assertIn("get_models", mcp_handler.tools)
         self.assertIn("execute_sql_query", mcp_handler.tools)
 
-    def test_x_frame_options_header_removal(self):
-        """Test that X-Frame-Options header is removed by Tidewave middleware"""
+    def test_x_frame_options_and_csp_headers(self):
+        """Test that X-Frame-Options and CSP headers"""
         app = Flask(__name__)
         app.debug = True
 

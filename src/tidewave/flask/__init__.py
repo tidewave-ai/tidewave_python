@@ -22,44 +22,46 @@ class Tidewave:
         self.config = config or {}
 
     def init_app(self, app):
-        if app.debug:
-            # Create MCP tools
-            mcp_tools = [
-                tools.get_docs,
-                tools.get_logs,
-                tools.get_source_location,
-                tools.project_eval,
-            ]
+        if not app.debug:
+            return
 
-            # Add SQLAlchemy tools if available
-            if "sqlalchemy" in app.extensions:
-                from tidewave.sqlalchemy import execute_sql_query, get_models
+        # Create MCP tools
+        mcp_tools = [
+            tools.get_docs,
+            tools.get_logs,
+            tools.get_source_location,
+            tools.project_eval,
+        ]
 
-                with app.app_context():
-                    db = app.extensions["sqlalchemy"]
-                    mcp_tools.extend(
-                        [
-                            get_models(db.Model),
-                            execute_sql_query(db.engine),
-                        ]
-                    )
+        # Add SQLAlchemy tools if available
+        if "sqlalchemy" in app.extensions:
+            from tidewave.sqlalchemy import execute_sql_query, get_models
 
-            # Create MCP handler
-            mcp_handler = MCPHandler(mcp_tools)
+            with app.app_context():
+                db = app.extensions["sqlalchemy"]
+                mcp_tools.extend(
+                    [
+                        get_models(db.Model),
+                        execute_sql_query(db.engine),
+                    ]
+                )
 
-            # Get project name
-            project_name = "flask_app"
-            try:
-                project_name = current_app.name
-            except RuntimeError:
-                pass
+        # Create MCP handler
+        mcp_handler = MCPHandler(mcp_tools)
 
-            # Create config for middleware
-            middleware_config = {
-                **self.config,
-                "framework_type": "flask",
-                "project_name": project_name,
-            }
+        # Get project name
+        project_name = "flask_app"
+        try:
+            project_name = current_app.name
+        except RuntimeError:
+            pass
 
-            app.wsgi_app = MCPMiddleware(Middleware(app.wsgi_app), mcp_handler, middleware_config)
-            app.jinja_env.add_extension(Extension)
+        # Create config for middleware
+        middleware_config = {
+            **self.config,
+            "framework_type": "flask",
+            "project_name": project_name,
+        }
+
+        app.wsgi_app = MCPMiddleware(Middleware(app.wsgi_app), mcp_handler, middleware_config)
+        app.jinja_env.add_extension(Extension)
