@@ -7,9 +7,6 @@ from tidewave.middleware import modify_csp
 
 class Middleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        if request.url.path.startswith("/tidewave"):
-            return await call_next(request)
-
         response = await call_next(request)
         return self._process_response(response)
 
