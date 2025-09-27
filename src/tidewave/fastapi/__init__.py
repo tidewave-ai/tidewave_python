@@ -11,13 +11,13 @@ from starlette.middleware.wsgi import WSGIMiddleware
 
 import __main__
 from tidewave import tools
-from tidewave.fastapi.middleware import Middleware as HeadersMiddleware
+from tidewave.fastapi.middleware import Middleware
 from tidewave.mcp_handler import MCPHandler
-from tidewave.middleware import Middleware
+from tidewave.middleware import Middleware as MCPMiddleware
 
 
 def mount(app: FastAPI, config: Optional[dict[str, Any]] = None):
-    """Mount Tidewave middleware to a FastAPI application
+    """Mount Tidewave routes and middleware to a FastAPI application
 
     Args:
         app: FastAPI application instance
@@ -55,7 +55,6 @@ def mount(app: FastAPI, config: Optional[dict[str, Any]] = None):
         "use_script_name": True,
     }
 
-    middleware = Middleware(wsgi_app, mcp_handler, config)
-
-    app.mount("/tidewave", WSGIMiddleware(middleware))
-    app.add_middleware(HeadersMiddleware)
+    mcp_middleware = MCPMiddleware(wsgi_app, mcp_handler, config)
+    app.mount("/tidewave", WSGIMiddleware(mcp_middleware))
+    app.add_middleware(Middleware)
