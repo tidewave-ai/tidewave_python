@@ -22,12 +22,13 @@ dependencies = [ "pydantic>=2" ]
 django = [ "django>=4.2" ]
 flask = [ "flask>=2" ]
 sqlalchemy = [ "sqlalchemy>=2.0" ]
-fastapi = [ "fastapi>=0.100" ]
+fastapi = [ "fastapi>=0.100", "a2wsgi>=1.9.0" ]
 
 [dependency-groups]
 dev = [
   "django>=4.2",
   "fastapi>=0.100",
+  "a2wsgi>=1.9.0",
   "flask>=2",
   "sqlalchemy>=2.0",
 

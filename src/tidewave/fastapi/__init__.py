@@ -7,7 +7,7 @@ from typing import Any, Optional
 
 from fastapi import FastAPI
 
-from starlette.middleware.wsgi import WSGIMiddleware
+from a2wsgi import WSGIMiddleware
 
 import __main__
 from tidewave import tools

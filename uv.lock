@@ -7,6 +7,18 @@ resolution-markers = [
 ]
 
 [[package]]
+name = "a2wsgi"
+version = "1.10.10"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9a/cb/822c56fbea97e9eee201a2e434a80437f6750ebcb1ed307ee3a0a7505b14/a2wsgi-1.10.10.tar.gz", hash = "sha256:a5bcffb52081ba39df0d5e9a884fc6f819d92e3a42389343ba77cbf809fe1f45", size = 18799, upload-time = "2025-06-18T09:00:10.843Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/02/d5/349aba3dc421e73cbd4958c0ce0a4f1aa3a738bc0d7de75d2f40ed43a535/a2wsgi-1.10.10-py3-none-any.whl", hash = "sha256:d2b21379479718539dc15fce53b876251a0efe7615352dfe49f6ad1bc507848d", size = 17389, upload-time = "2025-06-18T09:00:09.676Z" },
+]
+
+[[package]]
 name = "annotated-types"
 version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -701,6 +713,7 @@ django = [
     { name = "django", version = "5.2.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
 ]
 fastapi = [
+    { name = "a2wsgi" },
     { name = "fastapi" },
 ]
 flask = [
@@ -712,6 +725,7 @@ sqlalchemy = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "a2wsgi" },
     { name = "django", version = "4.2.23", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "django", version = "5.2.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "fastapi" },
@@ -726,6 +740,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "a2wsgi", marker = "extra == 'fastapi'", specifier = ">=1.9.0" },
     { name = "django", marker = "extra == 'django'", specifier = ">=4.2" },
     { name = "fastapi", marker = "extra == 'fastapi'", specifier = ">=0.100" },
     { name = "flask", marker = "extra == 'flask'", specifier = ">=2" },
@@ -736,6 +751,7 @@ provides-extras = ["django", "flask", "sqlalchemy", "fastapi"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "a2wsgi", specifier = ">=1.9.0" },
     { name = "django", specifier = ">=4.2" },
     { name = "fastapi", specifier = ">=0.100" },
     { name = "flask", specifier = ">=2" },
