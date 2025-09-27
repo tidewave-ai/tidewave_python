@@ -28,7 +28,7 @@ class Tidewave:
     def __init__(self, config: Optional[dict[str, Any]] = None):
         self.config = config or {}
 
-    def install(self, app: FastAPI):
+    def install(self, app: FastAPI, sqlalchemy_base=None, sqlalchemy_engine=None):
         if not app.debug:
             return
 
@@ -37,14 +37,25 @@ class Tidewave:
             start_response("404 Not Found", [("Content-Type", "text/plain")])
             return [b"Not Found"]
 
-        mcp_handler = MCPHandler(
-            [
-                tools.get_docs,
-                tools.get_logs,
-                tools.get_source_location,
-                tools.project_eval,
-            ]
-        )
+        # Create MCP tools
+        mcp_tools = [
+            tools.get_docs,
+            tools.get_logs,
+            tools.get_source_location,
+            tools.project_eval,
+        ]
+
+        if sqlalchemy_base is not None:
+            from tidewave.sqlalchemy import get_models
+
+            mcp_tools.extend([get_models(sqlalchemy_base)])
+
+        if sqlalchemy_engine is not None:
+            from tidewave.sqlalchemy import execute_sql_query
+
+            mcp_tools.extend([execute_sql_query(sqlalchemy_engine)])
+
+        mcp_handler = MCPHandler(mcp_tools)
 
         project_name = "fastapi_app"
         try:

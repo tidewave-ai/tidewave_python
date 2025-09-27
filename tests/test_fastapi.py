@@ -7,6 +7,9 @@ import unittest
 from fastapi import FastAPI, Response
 from fastapi.testclient import TestClient
 
+from sqlalchemy import Column, Integer, String, create_engine
+from sqlalchemy.orm import declarative_base
+
 from tidewave.fastapi import Tidewave
 
 
@@ -101,3 +104,38 @@ class TestFastAPITidewave(unittest.TestCase):
         self.assertIn("script-src 'self' 'unsafe-eval'", csp)
         self.assertNotIn("frame-ancestors", csp)
         self.assertIn("default-src 'none'", csp)
+
+    def test_with_sqlalchemy(self):
+        """Test that SQLAlchemy tools are added when SQLAlchemy parameters are provided"""
+        app = FastAPI(debug=True)
+
+        # Create SQLAlchemy setup
+        engine = create_engine("sqlite:///:memory:")
+        Base = declarative_base()
+
+        class User(Base):
+            __tablename__ = "users"
+            id = Column(Integer, primary_key=True)
+            name = Column(String(50))
+
+        Base.metadata.create_all(engine)
+
+        @app.get("/test")
+        def test_route():
+            return {"message": "Test response"}
+
+        tidewave = Tidewave()
+        tidewave.install(app, sqlalchemy_base=Base, sqlalchemy_engine=engine)
+
+        # Get the mounted WSGI middleware and access the MCP handler
+        tidewave_routes = [
+            route for route in app.routes if hasattr(route, "path") and "tidewave" in route.path
+        ]
+        wsgi_middleware = tidewave_routes[0].app
+        base_middleware = wsgi_middleware.app
+        mcp_handler = base_middleware.mcp_handler
+
+        # Verify SQLAlchemy tools were added
+        self.assertIn("project_eval", mcp_handler.tools)
+        self.assertIn("get_models", mcp_handler.tools)
+        self.assertIn("execute_sql_query", mcp_handler.tools)
