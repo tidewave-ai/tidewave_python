@@ -692,7 +692,6 @@ name = "tidewave"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "httpx" },
     { name = "pydantic" },
 ]
 
@@ -700,6 +699,9 @@ dependencies = [
 django = [
     { name = "django", version = "4.2.23", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "django", version = "5.2.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+]
+fastapi = [
+    { name = "fastapi" },
 ]
 flask = [
     { name = "flask" },
@@ -715,6 +717,7 @@ dev = [
     { name = "fastapi" },
     { name = "flask" },
     { name = "flask-sqlalchemy" },
+    { name = "httpx" },
     { name = "pytest" },
     { name = "ruff" },
     { name = "sqlalchemy" },
@@ -724,12 +727,12 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "django", marker = "extra == 'django'", specifier = ">=4.2" },
+    { name = "fastapi", marker = "extra == 'fastapi'", specifier = ">=0.100" },
     { name = "flask", marker = "extra == 'flask'", specifier = ">=2" },
-    { name = "httpx", specifier = ">=0.28.1" },
     { name = "pydantic", specifier = ">=2" },
     { name = "sqlalchemy", marker = "extra == 'sqlalchemy'", specifier = ">=2.0" },
 ]
-provides-extras = ["django", "flask", "sqlalchemy"]
+provides-extras = ["django", "flask", "sqlalchemy", "fastapi"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -737,6 +740,7 @@ dev = [
     { name = "fastapi", specifier = ">=0.100" },
     { name = "flask", specifier = ">=2" },
     { name = "flask-sqlalchemy", specifier = ">=3.0" },
+    { name = "httpx", specifier = ">=0.28.1" },
     { name = "pytest", specifier = ">=7" },
     { name = "ruff", specifier = ">=0.12.9" },
     { name = "sqlalchemy", specifier = ">=2.0" },

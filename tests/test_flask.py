@@ -107,6 +107,9 @@ class TestFlaskTidewave(unittest.TestCase):
 
             response = make_response("Test response")
             response.headers["X-Frame-Options"] = "DENY"
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'none'; script-src 'self'; frame-ancestors 'none'"
+            )
             return response
 
         tidewave = Tidewave()
@@ -119,3 +122,8 @@ class TestFlaskTidewave(unittest.TestCase):
             self.assertEqual(response.data.decode(), "Test response")
             # Verify X-Frame-Options header was removed
             self.assertNotIn("X-Frame-Options", response.headers)
+            # Verify CSP updated
+            csp = response.headers["Content-Security-Policy"]
+            self.assertIn("script-src 'self' 'unsafe-eval'", csp)
+            self.assertNotIn("frame-ancestors", csp)
+            self.assertIn("default-src 'none'", csp)
