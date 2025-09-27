@@ -1,5 +1,5 @@
 """
-Django-specific middleware for Tidewave MCP integration
+Django-specific integration for Tidewave
 """
 
 import io

@@ -1,3 +1,7 @@
+"""
+Flask-specific integration for Tidewave
+"""
+
 from typing import Any, Optional
 
 from flask import current_app

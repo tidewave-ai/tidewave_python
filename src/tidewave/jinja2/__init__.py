@@ -1,3 +1,7 @@
+"""
+Jinja2-specific integration for Tidewave
+"""
+
 import os
 
 from jinja2 import nodes

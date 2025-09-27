@@ -1,8 +1,5 @@
 """
-TideWave SQLAlchemy integration package.
-
-This package provides tools and utilities for working with SQLAlchemy models
-in Flask and FastAPI applications.
+SQLAlchemy-specific integration for Tidewave
 """
 
 from .models import get_models

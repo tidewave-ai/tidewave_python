@@ -1,5 +1,5 @@
 """
-FastAPI-specific integration for Tidewave MCP
+FastAPI-specific integration for Tidewave
 """
 
 import os
