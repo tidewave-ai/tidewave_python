@@ -69,19 +69,24 @@ class Middleware:
         self.base_middleware = BaseMiddleware(self._dummy_wsgi_app, self.mcp_handler, self.config)
 
     def _setup_logging(self):
-        django_logger = logging.getLogger("django")
-        if file_handler not in django_logger.handlers:
-            file_handler.addFilter(
-                CallbackFilter(lambda record: record.name != "django.utils.autoreload")
-            )
-            file_handler.addFilter(
-                CallbackFilter(
-                    lambda record: not (
-                        record.name == "django.server" and "/tidewave" in record.getMessage()
-                    )
+        file_handler.addFilter(
+            CallbackFilter(lambda record: record.name != "django.utils.autoreload")
+        )
+        file_handler.addFilter(
+            CallbackFilter(
+                lambda record: not (
+                    (record.name == "django.server" or record.name == "django.request")
+                    and "/tidewave" in record.getMessage()
                 )
             )
-            django_logger.addHandler(file_handler)
+        )
+
+        # Set global handler. The "django" logger propagates, so it
+        # will also invoke that handler.
+        logging.getLogger().addHandler(file_handler)
+        # The "django.server" logger does not propagate, so we need
+        # to add the handler separately.
+        logging.getLogger("django.server").addHandler(file_handler)
 
     def _build_config(self) -> dict[str, Any]:
         """Build configuration based on Django settings"""

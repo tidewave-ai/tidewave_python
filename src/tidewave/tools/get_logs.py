@@ -7,17 +7,30 @@ from collections import deque
 from pathlib import Path
 from typing import Optional
 
+
+# Same as logging.Formatter, but strips any ANSI escape sequences.
+class ColorlessFormatter(logging.Formatter):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+
+    def format(self, record):
+        formatted = super().format(record)
+        return self.ansi_escape.sub("", formatted)
+
+
 cwd = os.getcwd()
 digest = hashlib.md5(cwd.encode("utf-8")).hexdigest()[:16]
 
 temp_dir = Path(tempfile.gettempdir())
 log_file = temp_dir / f"{digest}.tidewave.log"
 
+
 file_handler = logging.FileHandler(log_file, mode="a", encoding="utf-8")
 file_handler.setLevel(logging.DEBUG)
-file_handler.setFormatter(logging.Formatter("%(name)s : %(asctime)s - %(levelname)s - %(message)s"))
-
-logging.getLogger().addHandler(file_handler)
+file_handler.setFormatter(
+    ColorlessFormatter("%(name)s : %(asctime)s - %(levelname)s - %(message)s")
+)
 
 
 def get_logs(tail: int, *, grep: Optional[str] = None) -> str:
