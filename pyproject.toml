@@ -19,9 +19,10 @@ classifiers = [
 dependencies = [ "pydantic>=2" ]
 
 [project.optional-dependencies]
-django = ["django>=4.2"]
-flask = ["flask>=2"]
-sqlalchemy = ["sqlalchemy>=2.0"]
+django = [ "django>=4.2" ]
+flask = [ "flask>=2" ]
+sqlalchemy = [ "sqlalchemy>=2.0" ]
+fastapi = [ "fastapi>=0.100" ]
 
 [dependency-groups]
 dev = [

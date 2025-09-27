@@ -4,7 +4,8 @@ Basic tests for FastAPI integration
 
 import unittest
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
+from fastapi.testclient import TestClient
 
 from tidewave.fastapi import mount
 
@@ -33,3 +34,20 @@ class TestFastAPIIntegration(unittest.TestCase):
 
         # Check that specific tools are available
         self.assertIn("project_eval", mcp_handler.tools)
+
+    def test_fastapi_response_headers_modified(self):
+        app = FastAPI()
+
+        @app.get("/test")
+        def test_router():
+            content = "FastAPI response"
+            headers = {"X-Frame-Options": "DENY"}
+            return Response(content=content, headers=headers)
+
+        mount(app)
+        client = TestClient(app)
+        response = client.get("/test")
+
+        self.assertEqual(200, response.status_code)
+        self.assertEqual("FastAPI response", response.content.decode())
+        self.assertNotIn("X-Frame-Options", response.headers)
