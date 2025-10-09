@@ -27,7 +27,9 @@ class Tidewave:
 
     def init_app(self, app):
         if not app.debug:
-            return
+            raise RuntimeError(
+                "You should only call Tidewave.init_app in development, but app.debug=False."
+            )
 
         # Create MCP tools
         mcp_tools = [

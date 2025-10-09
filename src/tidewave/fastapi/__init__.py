@@ -29,9 +29,6 @@ class Tidewave:
         self.config = config or {}
 
     def install(self, app: FastAPI, sqlalchemy_base=None, sqlalchemy_engine=None):
-        if not app.debug:
-            return
-
         # Create WSGI app for MCP handling
         def wsgi_app(environ, start_response):
             start_response("404 Not Found", [("Content-Type", "text/plain")])

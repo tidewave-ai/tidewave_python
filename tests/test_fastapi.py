@@ -18,7 +18,7 @@ class TestFastAPITidewave(unittest.TestCase):
 
     def test_with_debug_mode(self):
         """Test that Tidewave initializes properly with FastAPI app in debug mode"""
-        app = FastAPI(debug=True)
+        app = FastAPI()
 
         @app.get("/test")
         def test_route():
@@ -52,32 +52,9 @@ class TestFastAPITidewave(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"message": "Test response"})
 
-    def test_with_production_mode(self):
-        """Test that Tidewave does not initialize middleware in production mode"""
-        app = FastAPI(debug=False)  # Production mode
-
-        @app.get("/test")
-        def test_route():
-            return {"message": "Test response"}
-
-        tidewave = Tidewave()
-        tidewave.install(app)
-
-        # Verify middleware was NOT applied (no tidewave routes should be mounted)
-        tidewave_routes = [
-            route for route in app.routes if hasattr(route, "path") and "tidewave" in route.path
-        ]
-        self.assertEqual(len(tidewave_routes), 0)
-
-        # Test that the app still works normally
-        client = TestClient(app)
-        response = client.get("/test")
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"message": "Test response"})
-
     def test_x_frame_options_and_csp_headers(self):
         """Test that X-Frame-Options and CSP headers"""
-        app = FastAPI(debug=True)
+        app = FastAPI()
 
         @app.get("/test")
         def test_route():
@@ -107,7 +84,7 @@ class TestFastAPITidewave(unittest.TestCase):
 
     def test_with_sqlalchemy(self):
         """Test that SQLAlchemy tools are added when SQLAlchemy parameters are provided"""
-        app = FastAPI(debug=True)
+        app = FastAPI()
 
         # Create SQLAlchemy setup
         engine = create_engine("sqlite:///:memory:")
