@@ -69,15 +69,11 @@ class Middleware:
         self.base_middleware = BaseMiddleware(self._dummy_wsgi_app, self.mcp_handler, self.config)
 
     def _setup_logging(self):
+        file_handler.addFilter(lambda record: record.name != "django.utils.autoreload")
         file_handler.addFilter(
-            CallbackFilter(lambda record: record.name != "django.utils.autoreload")
-        )
-        file_handler.addFilter(
-            CallbackFilter(
-                lambda record: not (
-                    (record.name == "django.server" or record.name == "django.request")
-                    and "/tidewave" in record.getMessage()
-                )
+            lambda record: not (
+                (record.name == "django.server" or record.name == "django.request")
+                and " /tidewave" in record.getMessage()
             )
         )
 
