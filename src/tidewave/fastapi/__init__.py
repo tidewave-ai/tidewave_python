@@ -2,6 +2,7 @@
 FastAPI-specific integration for Tidewave
 """
 
+import logging
 import os
 from typing import Any, Optional
 
@@ -14,6 +15,7 @@ from tidewave import tools
 from tidewave.fastapi.middleware import Middleware
 from tidewave.mcp_handler import MCPHandler
 from tidewave.middleware import Middleware as MCPMiddleware
+from tidewave.tools.get_logs import file_handler
 
 
 class Tidewave:
@@ -74,3 +76,21 @@ class Tidewave:
         mcp_middleware = MCPMiddleware(wsgi_app, mcp_handler, config)
         app.mount("/tidewave", WSGIMiddleware(mcp_middleware))
         app.add_middleware(Middleware)
+
+        self._setup_logging()
+
+    def _setup_logging(self):
+        file_handler.addFilter(
+            lambda record: not (
+                (record.name == "uvicorn.access") and " /tidewave" in record.getMessage()
+            )
+        )
+
+        # We set a global logger handler. The "uvicorn.error" logger
+        # propagates [1], so it will also invoke that handler, on the
+        # other hand, "uvicorn.access" logger does not propagate, s
+        # we need to add the handler separately.
+        #
+        # [1]: https://github.com/Kludex/uvicorn/blob/0.37.0/uvicorn/config.py#L94-L98
+        logging.getLogger().addHandler(file_handler)
+        logging.getLogger("uvicorn.access").addHandler(file_handler)
