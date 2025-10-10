@@ -88,7 +88,7 @@ class Tidewave:
 
         # We set a global logger handler. The "uvicorn.error" logger
         # propagates [1], so it will also invoke that handler, on the
-        # other hand, "uvicorn.access" logger does not propagate, s
+        # other hand, "uvicorn.access" logger does not propagate, so
         # we need to add the handler separately.
         #
         # [1]: https://github.com/Kludex/uvicorn/blob/0.37.0/uvicorn/config.py#L94-L98
