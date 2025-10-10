@@ -6,6 +6,7 @@ import unittest
 
 from flask import Flask, render_template_string
 
+import pytest
 from flask_sqlalchemy import SQLAlchemy
 
 from tidewave.flask import Tidewave
@@ -61,7 +62,9 @@ class TestFlaskTidewave(unittest.TestCase):
             return render_template_string(template)
 
         tidewave = Tidewave()
-        tidewave.init_app(app)
+
+        with pytest.raises(RuntimeError):
+            tidewave.init_app(app)
 
         # Verify middleware was NOT applied (wsgi_app should still be original type)
         self.assertEqual(type(app.wsgi_app).__name__, original_wsgi_app_type)

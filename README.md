@@ -53,9 +53,10 @@ Add `tidewave[flask]` as a dependency to your `pyproject.toml`:
 Now, in your application definition, you can initialize the `Tidewave` class and pass your Flask application to `init_app`:
 
 ```python
-from tidewave.flask import Tidewave
-tidewave = Tidewave()
-tidewave.init_app(app)
+if app.debug:
+    from tidewave.flask import Tidewave
+    tidewave = Tidewave()
+    tidewave.init_app(app)
 ```
 
 Tidewave will automatically detect if your Flask application is using SQLAlchemy and Jinja2 and configure them automatically.
@@ -80,20 +81,24 @@ Add `tidewave[fastapi]` as a dependency to your `pyproject.toml`:
 "tidewave[fastapi] @ git+https://github.com/tidewave-ai/tidewave_python.git",
 ```
 
-Now, in your application definition, you can initialize the `Tidewave` class and pass your FastAPI application to `install`:
+Now, in your application definition, you can initialize the `Tidewave` class and pass your FastAPI application to `install`. Note that you only want to do this in **development mode**:
 
 ```python
-from tidewave.fastapi import Tidewave
-tidewave = Tidewave()
-tidewave.install(app)
+# Your preferable way of detecting dev mode.
+is_dev = os.environ.get("RUN_MODE", None) == "development"
+
+if is_dev:
+    from tidewave.fastapi import Tidewave
+    tidewave = Tidewave()
+    tidewave.install(app)
 ```
 
-Note Tidewave only runs when `app.debug` is `True`. Therefore, remember to start your dev server with `fastapi dev`. If you are setting `app.debug` programatically, remember to do so before you call `tidewave.install`.
-
-If you are using Jinja2, you need to add our extension too (preferably in `app.debug` mode only):
+If you are using Jinja2, you need to add our extension too:
 
 ```python
-if app.debug:
+if is_dev:
+    # ...
+
     from tidewave.jinja2 import Extension
     templates.env.add_extension(Extension)
 ```
