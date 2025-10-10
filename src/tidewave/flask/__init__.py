@@ -2,9 +2,10 @@
 Flask-specific integration for Tidewave
 """
 
+import logging
 from typing import Any, Optional
 
-from flask import current_app
+from flask import current_app, got_request_exception, request
 
 from tidewave import tools
 from tidewave.flask.middleware import Middleware
@@ -69,3 +70,22 @@ class Tidewave:
 
         app.wsgi_app = MCPMiddleware(Middleware(app.wsgi_app), mcp_handler, middleware_config)
         app.jinja_env.add_extension(Extension)
+
+        # In debug mode, exceptions are not logged [1], they propagate,
+        # the debugger shows an error page and only writes to stderr [2].
+        # We want the exceptions to appear in get_logs, so we log them
+        # explicitly.
+        #
+        # [1]: https://flask.palletsprojects.com/en/stable/api/#flask.Flask.handle_exception
+        # [2]: https://github.com/pallets/werkzeug/blob/3.1.3/src/werkzeug/debug/__init__.py#L378
+        got_request_exception.connect(app_exception_handler, app)
+
+
+def app_exception_handler(sender, exception, **extra):
+    # We log to the default logger. This does not log to the terminal,
+    # because terminal output comes from terminal handlers in more
+    # specific flask/werkzeug loggers.
+    logging.getLogger().exception(
+        f"Exception on {request.path} [{request.method}]",
+        exc_info=exception,
+    )
