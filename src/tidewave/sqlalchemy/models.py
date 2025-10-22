@@ -21,8 +21,12 @@ def get_models(base_class) -> Callable[[], str]:
             if model is base_class:
                 continue
 
-            # Check if it's an abstract model (has __abstract__ = True)
-            if getattr(model, "__abstract__", False):
+            # Check if it's an abstract model (has __abstract__ = True).
+            # Note that we check the dict instead of using getattr,
+            # so that we check the attribute on the specific model,
+            # otherwise we may access the attribute inherited from
+            # parent.
+            if model.__dict__.get("__abstract__", False):
                 continue
 
             # Check if it has any columns (indicating it's a concrete model)
