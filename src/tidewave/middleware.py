@@ -62,6 +62,8 @@ class Middleware:
         else:
             full_path = path_info
 
+        full_path = full_path.rstrip("/")
+
         if full_path.startswith("/tidewave"):
             security_error = self._check_security(environ)
             if security_error:
