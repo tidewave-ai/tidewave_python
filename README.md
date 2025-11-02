@@ -109,6 +109,8 @@ If you are using SQLAlchemy, then you need to pass your `Base` class and the und
 tidewave.install(app, sqlalchemy_base=Base, sqlalchemy_engine=engine)
 ```
 
+*Note: when using [SQLModel](https://sqlmodel.tiangolo.com/), you should set `sqlalchemy_base=SQLModel`.*
+
 #### Configuration
 
 When initializing `Tidewave()`, the following options are supported:
