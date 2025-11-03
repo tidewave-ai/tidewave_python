@@ -4,11 +4,12 @@ Django-specific integration for Tidewave
 
 import io
 import logging
+import threading
+import traceback
 from typing import Any, Callable
 
 from django.conf import settings
 from django.http import HttpResponse
-from django.utils.log import CallbackFilter
 
 import tidewave.tools as tidewave_tools
 from tidewave.django.models import get_models
@@ -17,6 +18,46 @@ from tidewave.mcp_handler import MCPHandler
 from tidewave.middleware import Middleware as BaseMiddleware, modify_csp
 from tidewave.tools.get_logs import file_handler
 
+
+def add_threading_except_hook():
+    # Some errors prevent the server from starting, for example
+    # a missing import in urls.py. The process keeps running, just
+    # without the server. The LLM can fix the issue, then the watcher
+    # restarts the server and it works as expected. To enable the LLM
+    # to fix the issue, we need to surface the startup error in the
+    # logs. The crash results from an uncaught exception in the Django
+    # thread, so we patch the global excepthook, so that we write the
+    # exception to the log file.
+
+    original_threading_excepthook = threading.excepthook
+
+
+    def tidewave_excepthook(args):
+        if args.thread is not None and args.thread.name == "django-main-thread":
+            formatted = "".join(
+                traceback.format_exception(args.exc_type, args.exc_value, args.exc_traceback)
+            )
+            message = "Django terminated with exception:\n" + formatted
+            record = logging.LogRecord(
+                name="tidewave.exceptionhook",
+                level=logging.ERROR,
+                pathname="",
+                lineno=0,
+                msg=message,
+                args=(),
+                exc_info=None,
+            )
+
+            file_handler.emit(record)
+            file_handler.flush()
+
+        if original_threading_excepthook is not None:
+            original_threading_excepthook(args)
+
+
+    threading.excepthook = tidewave_excepthook
+
+add_threading_except_hook()
 
 class Middleware:
     """Django middleware for Tidewave MCP integration
