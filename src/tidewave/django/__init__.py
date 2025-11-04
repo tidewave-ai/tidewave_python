@@ -4,10 +4,14 @@ Django-specific integration for Tidewave
 
 import io
 import logging
+import subprocess
+import sys
 import threading
+import time
 import traceback
 from typing import Any, Callable
 
+import django.utils.autoreload
 from django.conf import settings
 from django.http import HttpResponse
 
@@ -31,33 +35,74 @@ def add_threading_except_hook():
 
     original_threading_excepthook = threading.excepthook
 
-
     def tidewave_excepthook(args):
         if args.thread is not None and args.thread.name == "django-main-thread":
             formatted = "".join(
                 traceback.format_exception(args.exc_type, args.exc_value, args.exc_traceback)
             )
-            message = "Django terminated with exception:\n" + formatted
-            record = logging.LogRecord(
-                name="tidewave.exceptionhook",
-                level=logging.ERROR,
-                pathname="",
-                lineno=0,
-                msg=message,
-                args=(),
-                exc_info=None,
-            )
-
-            file_handler.emit(record)
-            file_handler.flush()
+            emit_error_log("Django terminated with exception:\n" + formatted)
 
         if original_threading_excepthook is not None:
             original_threading_excepthook(args)
 
-
     threading.excepthook = tidewave_excepthook
 
+
+def patch_django_autoreload():
+    original_restart_with_reloader = django.utils.autoreload.restart_with_reloader
+
+    def new_restart_with_reloader():
+        while True:
+            # With autoreload enabled, Django has a top-level process,
+            # which then starts a child server process. The child
+            # process also runs a watcher and calls sys.exit(3) whenever
+            # files change. The top-level process then tries to start
+            # a new child. This loop is defined in restart_with_reloader [1].
+            # If booting the child fails (for example, exception in
+            # settings.py), the loop stops and all processes terminate.
+            # We want to keep the process running, so we patch the
+            # loop, such that on boot failure, we wait 1 second and
+            # try booting again. We want to enable the LLM to see the
+            # exception, so we run "python manage.py shell", which
+            # should fail with the exception in stderr, and then we
+            # write that exception to our log file.
+            #
+            # [1]: https://github.com/django/django/blob/5.2.6/django/utils/autoreload.py#L269-L275
+            original_restart_with_reloader()
+
+            manage_py_path = sys.argv[0]
+            process = subprocess.run(
+                [sys.executable, manage_py_path, "shell"], capture_output=True, text=True, input=""
+            )
+
+            if process.returncode != 0:
+                print("[Tidewave] Django failed to boot, retrying in 2 seconds")
+                emit_error_log(
+                    "Django failed to boot, retrying in 2 seconds. Error:" + process.stderr
+                )
+                time.sleep(2)
+
+    django.utils.autoreload.restart_with_reloader = new_restart_with_reloader
+
+
+def emit_error_log(message: str):
+    record = logging.LogRecord(
+        name="tidewave",
+        level=logging.ERROR,
+        pathname="",
+        lineno=0,
+        msg=message,
+        args=(),
+        exc_info=None,
+    )
+
+    file_handler.emit(record)
+    file_handler.flush()
+
+
 add_threading_except_hook()
+patch_django_autoreload()
+
 
 class Middleware:
     """Django middleware for Tidewave MCP integration
