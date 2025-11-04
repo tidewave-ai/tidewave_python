@@ -1,6 +1,6 @@
 # Tidewave
 
-> Tidewave Web for Django and Flask is currently in alpha testing!
+> Tidewave Web for Django, FastAPI, and Flask is currently in alpha testing!
 
 Tidewave is the coding agent for full-stack web app development, deeply integrated with Python web frameworks, from the database to the UI. [See our website](https://tidewave.ai) for more information.
 

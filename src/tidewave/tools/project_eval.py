@@ -2,6 +2,7 @@ import contextlib
 import io
 import json as json_module
 import multiprocessing
+import queue as q
 from typing import Any, Optional
 
 
@@ -33,15 +34,15 @@ def project_eval(
     # us to terminate it once a timeout is reached. If we were to run
     # the code in another thread instead, we would have no clean way
     # of stopping it (other than signals, but those only work on Unix).
-
-    timeout = timeout / 1000  # Convert milliseconds to seconds.
+    timeout = timeout / 1000  # Convert milliseconds to seconds
 
     queue = multiprocessing.Queue()
     process = multiprocessing.Process(target=execute_code, args=(code, arguments, queue))
     process.start()
-    process.join(timeout)
 
-    if process.is_alive():
+    try:
+        output = queue.get(timeout=timeout)
+    except q.Empty:
         process.terminate()
         process.join()
         result = f"Code execution timed out after {timeout} seconds"
@@ -50,7 +51,7 @@ def project_eval(
         stderr = ""
         error_message = result
     else:
-        output = queue.get() if not queue.empty() else {}
+        process.join()
         result = output.get("result", "")
         success = output.get("success", False)
         stdout = output.get("stdout", "")
@@ -76,7 +77,7 @@ def project_eval(
             f"STDERR:\n{stderr}",
             f"Result:\n{str(result)}",
         ]
-        return "".join(output)
+        return "\n".join(output)
 
 
 # Note: Defined at the module level so it can be used in the multiprocessing context.

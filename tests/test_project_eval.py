@@ -81,8 +81,15 @@ class TestPythonEvalTool(unittest.TestCase):
         """Test non-JSON output"""
         code = "print('hello world')\nresult = 42"
         result = project_eval(code, json=False)
-        expected_output = "STDOUT:\nhello world\nSTDERR:\nResult:\n42"
+        expected_output = "STDOUT:\nhello world\n\nSTDERR:\n\nResult:\n42"
         self.assertEqual(result, expected_output)
+
+    def test_large_output(self):
+        """Test large output"""
+        code = "'a' * 1_000_000"
+        result = project_eval(code, json=True)
+        output = self._collect_output(result)
+        self.assertEqual(len(output["result"]), 1_000_000)
 
     def test_multiline_code_execution(self):
         """Test multi-line Python code"""
