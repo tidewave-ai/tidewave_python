@@ -34,13 +34,15 @@ JINJA2_ENVIRONMENT_OPTIONS = {
 }
 ```
 
-Note Tidewave only runs in DEBUG mode.
+Now make sure [Tidewave is installed](https://hexdocs.pm/tidewave/installation.html) and you are ready to connect Tidewave to your app.
 
 #### Settings
 
 * `ALLOWED_HOSTS` - Tidewave use the same allowed origins as your app to validate access
 * `TIDEWAVE["allow_remote_access"]` - Whether to allow remote connections (default `False`)
 * `TIDEWAVE["team"]` - Enable your Tidewave Team configuration, such as `TIDEWAVE = {"team": {"id": "dashbit"}}`
+
+Note Tidewave only runs in DEBUG mode.
 
 ### Flask
 
@@ -59,9 +61,9 @@ if app.debug:
     tidewave.init_app(app)
 ```
 
-Tidewave will automatically detect if your Flask application is using SQLAlchemy and Jinja2 and configure them automatically.
-
 Note Tidewave only runs when `app.debug` is `True`. Therefore, remember to start your dev server with the `--debug` flag. If you are setting `app.debug` programatically, remember to do so before you call `tidewave.init_app`.
+
+Now make sure [Tidewave is installed](https://hexdocs.pm/tidewave/installation.html) and you are ready to connect Tidewave to your app.
 
 #### Configuration
 
@@ -70,6 +72,8 @@ When initializing `Tidewave()`, the following options are supported:
 - `allow_remote_access:` allow remote connections when True (default False)
 - `allowed_origins:` list of allowed origin hosts (default [])
 - `team`: enable Tidewave Web for teams
+
+Tidewave will automatically detect if your Flask application is using SQLAlchemy and Jinja2 and configure them automatically.
 
 ### FastAPI
 
@@ -110,6 +114,8 @@ tidewave.install(app, sqlalchemy_base=Base, sqlalchemy_engine=engine)
 ```
 
 *Note: when using [SQLModel](https://sqlmodel.tiangolo.com/), you should set `sqlalchemy_base=SQLModel`.*
+
+Now make sure [Tidewave is installed](https://hexdocs.pm/tidewave/installation.html) and you are ready to connect Tidewave to your app.
 
 #### Configuration
 
