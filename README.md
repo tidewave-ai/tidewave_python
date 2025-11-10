@@ -151,6 +151,10 @@ uv run ruff check --fix .
 uv run ruff format .
 ```
 
+## Releases
+
+This project uses Trusted Publishing. Tag a new version, publish the release on GitHub with CHANGELOG, and a new version will be released on PyPi.
+
 ## Acknowledgements
 
 A thank you to [Rob Hudson](https://github.com/robhudson) for implementing the Django integration.
