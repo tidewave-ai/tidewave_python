@@ -18,6 +18,11 @@ classifiers = [
 ]
 dependencies = [ "pydantic>=2" ]
 
+[project.urls]
+Homepage = "https://tidewave.ai"
+Repository = "https://github.com/tidewave-ai/tidewave_python"
+Issues = "https://github.com/tidewave-ai/tidewave_python/issues"
+
 [project.optional-dependencies]
 django = [ "django>=4.2" ]
 flask = [ "flask>=2" ]
