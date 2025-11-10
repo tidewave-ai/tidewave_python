@@ -5,7 +5,7 @@ requires = [ "hatchling" ]
 [project]
 name = "tidewave"
 version = "0.1.0"
-description = "Python WSGI middleware for Model Context Protocol (MCP)"
+description = "Tidewave Web for Django, FastAPI, and Flask"
 readme = "README.md"
 requires-python = ">=3.9"
 classifiers = [

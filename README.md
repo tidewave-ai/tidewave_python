@@ -13,7 +13,7 @@ This project can also be used as a standalone Model Context Protocol (MCP) serve
 Add `tidewave[django]` as a dependency to your `pyproject.toml`:
 
 ```
-"tidewave[django] @ git+https://github.com/tidewave-ai/tidewave_python.git",
+"tidewave[django]",
 ```
 
 Then open up your `settings.py` and add the following after your `MIDDLEWARE` and `INSTALLED_APPS` definition:
@@ -49,7 +49,7 @@ Note Tidewave only runs in DEBUG mode.
 Add `tidewave[flask]` as a dependency to your `pyproject.toml`:
 
 ```
-"tidewave[flask] @ git+https://github.com/tidewave-ai/tidewave_python.git",
+"tidewave[flask]",
 ```
 
 Now, in your application definition, you can initialize the `Tidewave` class and pass your Flask application to `init_app`:
@@ -82,7 +82,7 @@ Tidewave will automatically detect if your Flask application is using SQLAlchemy
 Add `tidewave[fastapi]` as a dependency to your `pyproject.toml`:
 
 ```
-"tidewave[fastapi] @ git+https://github.com/tidewave-ai/tidewave_python.git",
+"tidewave[fastapi]",
 ```
 
 Now, in your application definition, you can initialize the `Tidewave` class and pass your FastAPI application to `install`. Note that you only want to do this in **development mode**:
