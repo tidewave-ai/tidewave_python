@@ -1,10 +1,8 @@
 # Tidewave
 
-> Tidewave Web for Django, FastAPI, and Flask is currently in alpha testing!
-
 Tidewave is the coding agent for full-stack web app development, deeply integrated with Python web frameworks, from the database to the UI. [See our website](https://tidewave.ai) for more information.
 
-This project can also be used as a standalone Model Context Protocol (MCP) server for your editors.
+This project supports Django, FastAPI, and Flask. It can also be used as a standalone Model Context Protocol (MCP) server for your editors.
 
 ## Installation
 
@@ -38,7 +36,6 @@ Now make sure [Tidewave is installed](https://hexdocs.pm/tidewave/installation.h
 
 #### Settings
 
-* `ALLOWED_HOSTS` - Tidewave use the same allowed origins as your app to validate access
 * `TIDEWAVE["allow_remote_access"]` - Whether to allow remote connections (default `False`)
 * `TIDEWAVE["team"]` - Enable your Tidewave Team configuration, such as `TIDEWAVE = {"team": {"id": "dashbit"}}`
 
@@ -70,7 +67,6 @@ Now make sure [Tidewave is installed](https://hexdocs.pm/tidewave/installation.h
 When initializing `Tidewave()`, the following options are supported:
 
 - `allow_remote_access:` allow remote connections when True (default False)
-- `allowed_origins:` list of allowed origin hosts (default [])
 - `team`: enable Tidewave Web for teams
 
 Tidewave will automatically detect if your Flask application is using SQLAlchemy and Jinja2 and configure them automatically.
@@ -122,16 +118,9 @@ Now make sure [Tidewave is installed](https://hexdocs.pm/tidewave/installation.h
 When initializing `Tidewave()`, the following options are supported:
 
 - `allow_remote_access:` allow remote connections when True (default False)
-- `allowed_origins:` list of allowed origin hosts (default [])
 - `team`: enable Tidewave Web for teams
 
 ## Troubleshooting
-
-Tidewave expects your web application to be running on `localhost`. If you are not running on localhost, you may need to enable additional configuration, such as `allow_remote_access`.
-
-Furthermore, Tidewave only runs while in `DEBUG`/`app.debug` mode on all frameworks.
-
-If you want to use Docker for development, you either need to enable the configuration above or automatically redirect the relevant ports, as done by [devcontainers](https://code.visualstudio.com/docs/devcontainers/containers). See our [containers](https://hexdocs.pm/tidewave/containers.html) guide for more information.
 
 ### Content security policy
 
