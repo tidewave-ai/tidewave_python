@@ -142,7 +142,7 @@ uv run ruff format .
 
 ## Releases
 
-This project uses Trusted Publishing. Tag a new version, publish the release on GitHub with CHANGELOG, and a new version will be released on PyPi.
+This project uses Trusted Publishing. Bump version on pyproject.toml, tag a new version, publish the release on GitHub with CHANGELOG, and a new version will be released on PyPi.
 
 ## Acknowledgements
 
