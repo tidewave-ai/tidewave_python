@@ -5,7 +5,7 @@ from typing import Optional
 
 from django.conf import settings
 from django.template import Template
-from django.template.base import mark_safe
+from django.template.base import Variable, mark_safe
 from django.template.loader_tags import BlockNode, ExtendsNode
 from django.utils.safestring import SafeString
 
@@ -25,7 +25,7 @@ def debug_render(self, context) -> str:
         if not template_path:
             return content
 
-        extends_parents = get_extends_parents(self)
+        extends_parents = get_extends_parents(self, context)
 
         if extends_parents == []:
             subtemplates = []
@@ -113,7 +113,7 @@ def get_template_path(template_or_block) -> Optional[str]:
     return str(template_path)
 
 
-def get_extends_parents(template) -> list[str]:
+def get_extends_parents(template, context) -> list[str]:
     extends_node = None
     for node in template.nodelist:
         if isinstance(node, ExtendsNode):
@@ -123,16 +123,22 @@ def get_extends_parents(template) -> list[str]:
     if not extends_node:
         return []
 
-    if hasattr(extends_node.parent_name, "var"):
-        parent_name = extends_node.parent_name.var
+    if hasattr(extends_node.parent_name, "resolve"):
+        try:
+            parent_name = extends_node.parent_name.resolve(context)
+        except Exception:
+            parent_name = None
     else:
         parent_name = str(extends_node.parent_name)
-    parent_template = template.engine.get_template(parent_name)
 
+    if not parent_name:
+        return []
+
+    parent_template = template.engine.get_template(parent_name)
     parent_template_path = get_template_path(parent_template)
 
     if not parent_template_path:
         return []
 
     # Recursively get the parent's chain
-    return [parent_template_path] + get_extends_parents(parent_template)
+    return [parent_template_path] + get_extends_parents(parent_template, context)

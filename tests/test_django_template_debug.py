@@ -31,6 +31,9 @@ class TestTemplateDebugRender(TestCase):
             BlockNode.render = BlockNode._tidewave_original_render
             del BlockNode._tidewave_original_render
 
+    def setUp(self):
+        self.maxDiff = None
+
     def _apply_debug_patch(self):
         """Helper to apply the debug patch manually"""
         # This mimics the patch_template_render method in `TidewaveConfig` without depending on
@@ -175,6 +178,25 @@ class TestTemplateDebugRender(TestCase):
                 f"<!-- TEMPLATE: {TEMPLATES_PATH / 'base.html'} -->"
                 f"<!-- BLOCK: content, TEMPLATE: {TEMPLATES_PATH / 'grandchild.html'} -->"
                 "<p>Grandchild content</p>"
+                "<!-- END BLOCK: content -->"
+                f"<!-- END TEMPLATE: {TEMPLATES_PATH / 'base.html'} -->"
+            ),
+        )
+
+    def test_dynamic_extends_with_string(self):
+        """Test a dynamic extends with a string variable"""
+        self._apply_debug_patch()
+
+        result = render_to_string("dynamic_extend.html", {"var": "child.html"})
+
+        self.assertEqual(
+            result.replace("\n", "").strip(),
+            (
+                f"<!-- SUBTEMPLATE: {TEMPLATES_PATH / 'dynamic_extend.html'} -->"
+                f"<!-- SUBTEMPLATE: {TEMPLATES_PATH / 'child.html'} -->"
+                f"<!-- TEMPLATE: {TEMPLATES_PATH / 'base.html'} -->"
+                f"<!-- BLOCK: content, TEMPLATE: {TEMPLATES_PATH / 'dynamic_extend.html'} -->"
+                "<p>Content</p>"
                 "<!-- END BLOCK: content -->"
                 f"<!-- END TEMPLATE: {TEMPLATES_PATH / 'base.html'} -->"
             ),
