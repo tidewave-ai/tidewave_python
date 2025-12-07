@@ -140,17 +140,6 @@ uv run ruff check --fix .
 uv run ruff format .
 ```
 
-## Releases
-
-This project uses Trusted Publishing:
-
-* Bump version on pyproject.toml
-* Run `uv sync`
-* Tag new version
-* Publish the release on GitHub with CHANGELOG
-
-Now a new version will be automatically pushed to PyPi.
-
 ## Acknowledgements
 
 A thank you to [Rob Hudson](https://github.com/robhudson) for implementing the Django integration.
