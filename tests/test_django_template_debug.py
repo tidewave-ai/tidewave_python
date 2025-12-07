@@ -202,6 +202,30 @@ class TestTemplateDebugRender(TestCase):
             ),
         )
 
+    def test_dynamic_extends_with_template_instance(self):
+        """Test a dynamic extends with a Template instance as variable"""
+        self._apply_debug_patch()
+
+        # Load the child template and pass it as a Template instance
+        with open(TEMPLATES_PATH / "child.html", encoding="utf-8") as f:
+            child_template_content = f.read()
+
+        # Create a Template instance to pass as the var
+        template_instance = Template(child_template_content)
+
+        result = render_to_string("dynamic_extend.html", {"var": template_instance})
+
+        self.assertEqual(
+            result.replace("\n", "").strip(),
+            (
+                f"<!-- TEMPLATE: {TEMPLATES_PATH / 'dynamic_extend.html'} -->"
+                f"<!-- BLOCK: content, TEMPLATE: {TEMPLATES_PATH / 'dynamic_extend.html'} -->"
+                "<p>Content</p>"
+                "<!-- END BLOCK: content -->"
+                f"<!-- END TEMPLATE: {TEMPLATES_PATH / 'dynamic_extend.html'} -->"
+            ),
+        )
+
     def test_child_template_with_includes(self):
         """Test that child template properly wraps included templates"""
         self._apply_debug_patch()

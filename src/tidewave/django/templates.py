@@ -126,13 +126,18 @@ def get_extends_parents(template, context) -> list[str]:
     if hasattr(extends_node.parent_name, "resolve"):
         try:
             parent_name = extends_node.parent_name.resolve(context)
+
+            if isinstance(parent_name, Template):
+                # parent is a django.template.Template
+                return []
+            if isinstance(getattr(parent_name, "template", None), Template):
+                # parent is a django.template.backends.django.Template
+                return []
+
         except Exception:
-            parent_name = None
+            return []
     else:
         parent_name = str(extends_node.parent_name)
-
-    if not parent_name:
-        return []
 
     parent_template = template.engine.get_template(parent_name)
     parent_template_path = get_template_path(parent_template)
