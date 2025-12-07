@@ -5,7 +5,7 @@ from typing import Optional
 
 from django.conf import settings
 from django.template import Template
-from django.template.base import Variable, mark_safe
+from django.template.base import mark_safe
 from django.template.loader_tags import BlockNode, ExtendsNode
 from django.utils.safestring import SafeString
 
@@ -123,21 +123,18 @@ def get_extends_parents(template, context) -> list[str]:
     if not extends_node:
         return []
 
-    if hasattr(extends_node.parent_name, "resolve"):
-        try:
-            parent_name = extends_node.parent_name.resolve(context)
+    try:
+        parent_name = extends_node.parent_name.resolve(context)
 
-            if isinstance(parent_name, Template):
-                # parent is a django.template.Template
-                return []
-            if isinstance(getattr(parent_name, "template", None), Template):
-                # parent is a django.template.backends.django.Template
-                return []
-
-        except Exception:
+        if isinstance(parent_name, Template):
+            # parent is a django.template.Template
             return []
-    else:
-        parent_name = str(extends_node.parent_name)
+        if isinstance(getattr(parent_name, "template", None), Template):
+            # parent is a django.template.backends.django.Template
+            return []
+
+    except Exception:
+        return []
 
     parent_template = template.engine.get_template(parent_name)
     parent_template_path = get_template_path(parent_template)
