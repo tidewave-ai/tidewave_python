@@ -120,6 +120,27 @@ When initializing `Tidewave()`, the following options are supported:
 - `allow_remote_access:` allow remote connections when True (default False)
 - `team`: enable Tidewave Web for teams
 
+## Available tools
+
+- `execute_sql_query` - executes a SQL query within your application
+  database, useful for the agent to verify the result of an action
+  (if Django or SQLAlchemy are configured)
+
+- `get_docs` - get the documentation for a given module/class/method.
+  It consults the exact versions used by the project, ensuring you always
+  get correct information
+
+- `get_logs` - reads logs written by the server
+
+- `get_models` - lists all modules in the application and their location
+  for quick discovery (if Django or SQLAlchemy are configured)
+
+- `get_source_location` - get the source location for a given module/class/method,
+  so an agent can directly read the source skipping search
+
+- `project_eval` - evaluates code within the web server itself, giving the agent
+  access to your runtime, dependencies, and in-memory data
+
 ## Troubleshooting
 
 ### Content security policy
