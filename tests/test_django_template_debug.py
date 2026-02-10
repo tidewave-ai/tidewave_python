@@ -247,6 +247,32 @@ class TestTemplateDebugRender(TestCase):
             ),
         )
 
+    @override_settings(
+        TEMPLATES=[
+            {
+                "BACKEND": "django.template.backends.django.DjangoTemplates",
+                "DIRS": [str(TEMPLATES_PATH / "override"), str(TEMPLATES_PATH)],
+                "APP_DIRS": True,
+                "OPTIONS": {"context_processors": ["django.template.context_processors.debug"]},
+            },
+        ]
+    )
+    def test_circular_extends_does_not_recurse_infinitely(self):
+        """Test that override templates extending same-named base don't cause infinite recursion.
+
+        This reproduces a real-world scenario (e.g. django-unfold) where a package overrides
+        a template like admin/base.html with its own version that {% extends "admin/base.html" %}.
+        Django resolves this at render time using a skip list, but get_extends_parents walks the
+        chain via engine.get_template() which always finds the override first, causing a cycle.
+        """
+        self._apply_debug_patch()
+
+        result = render_to_string("base.html")
+
+        self.assertIn("<!-- TEMPLATE:", result)
+        self.assertIn("<p>Override content</p>", result)
+        self.assertNotIn("RecursionError", result)
+
     def test_django_api_change(self):
         """Test behavior when expected django fields are not present"""
         self._apply_debug_patch()

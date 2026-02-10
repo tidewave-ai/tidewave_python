@@ -25,7 +25,7 @@ def debug_render(self, context) -> str:
         if not template_path:
             return content
 
-        extends_parents = get_extends_parents(self, context)
+        extends_parents = get_extends_parents(self, context, set())
 
         if extends_parents == []:
             subtemplates = []
@@ -113,7 +113,15 @@ def get_template_path(template_or_block) -> Optional[str]:
     return str(template_path)
 
 
-def get_extends_parents(template, context) -> list[str]:
+def get_extends_parents(template, context, seen) -> list[str]:
+    origin = getattr(template, "origin", None)
+    key = getattr(origin, "name", id(template))
+
+    if key in seen:
+        return []
+
+    seen.add(key)
+
     extends_node = None
     for node in template.nodelist:
         if isinstance(node, ExtendsNode):
@@ -143,4 +151,4 @@ def get_extends_parents(template, context) -> list[str]:
         return []
 
     # Recursively get the parent's chain
-    return [parent_template_path] + get_extends_parents(parent_template, context)
+    return [parent_template_path] + get_extends_parents(parent_template, context, seen)
