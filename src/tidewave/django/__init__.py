@@ -114,7 +114,6 @@ class Middleware:
             MIDDLEWARE.insert(0, 'tidewave.django.Middleware')
 
     Configuration:
-        - ALLOWED_HOSTS: Used as allowed origins
         - TIDEWAVE["allow_remote_access"]: Whether to allow remote connections (default False)
         - TIDEWAVE["team"]: Enable Tidewave for teams
 
@@ -172,13 +171,6 @@ class Middleware:
 
     def _build_config(self) -> dict[str, Any]:
         """Build configuration based on Django settings"""
-        allowed_hosts = getattr(settings, "ALLOWED_HOSTS", [])
-        debug = getattr(settings, "DEBUG", False)
-
-        # In debug mode with empty ALLOWED_HOSTS, allow local development
-        if not allowed_hosts and debug:
-            allowed_hosts = [".localhost", "127.0.0.1", "::1"]
-
         project_name = "django_app"
         try:
             project_name = settings.SETTINGS_MODULE.split(".")[0]
@@ -187,7 +179,6 @@ class Middleware:
 
         config = {
             **getattr(settings, "TIDEWAVE", {}),
-            "allowed_origins": allowed_hosts,
             "framework_type": "django",
             "project_name": project_name,
         }

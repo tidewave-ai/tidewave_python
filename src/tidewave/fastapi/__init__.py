@@ -23,7 +23,6 @@ class Tidewave:
 
     Configuration accepted on initialization:
       - allow_remote_access: bool (default False) - whether to allow remote connections
-      - allowed_origins: list of allowed origin hosts (default [])
       - team: Enable Tidewave for teams
     """
 

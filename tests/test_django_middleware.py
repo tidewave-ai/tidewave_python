@@ -45,25 +45,6 @@ class TestDjangoMiddleware(unittest.TestCase):
 
             self.assertEqual(config["allow_remote_access"], False)
 
-    def test_config_with_allowed_hosts_debug_false(self):
-        """Test that middleware uses ALLOWED_HOSTS when DEBUG is False"""
-        with override_settings(ALLOWED_HOSTS=["example.com", "api.example.com"], DEBUG=False):
-            middleware = Middleware(self.get_response)
-            config = middleware._build_config()
-
-            self.assertEqual(config["allowed_origins"], ["example.com", "api.example.com"])
-
-    def test_config_with_empty_allowed_hosts_debug_true(self):
-        """
-        Test that middleware defaults to local origins when ALLOWED_HOSTS is empty
-        and DEBUG is True
-        """
-        with override_settings(ALLOWED_HOSTS=[], DEBUG=True):
-            middleware = Middleware(self.get_response)
-            config = middleware._build_config()
-
-            self.assertEqual(config["allowed_origins"], [".localhost", "127.0.0.1", "::1"])
-
     def test_config_with_client_url(self):
         """Test that middleware uses CLIENT_URL setting"""
         with override_settings(TIDEWAVE={"client_url": "http://localhost:9000"}):

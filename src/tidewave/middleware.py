@@ -2,17 +2,12 @@
 WSGI Middleware for basic routing and security
 """
 
-import html
 import json
 import logging
 import re
-import select
-import struct
-import subprocess
 from collections.abc import Iterator
 from http import HTTPStatus
 from typing import Any, Callable, Optional
-from urllib.parse import urlparse
 
 from . import __version__
 from .mcp_handler import MCPHandler
@@ -36,14 +31,6 @@ class Middleware:
             config: Configuration dict with options:
                 - allow_remote_access: bool (default False) - whether to allow
                   remote connections. If False, only local IPs are allowed.
-                - allowed_origins: list of allowed origin hosts (default []) following
-                  Django's ALLOWED_HOSTS pattern:
-                  * Exact matches (case-insensitive): 'example.com', 'www.example.com'
-                  * Subdomain wildcards: '.example.com' matches example.com and all
-                    subdomains
-                  * Wildcard: '*' matches any host (use with caution)
-                  * Empty list defaults to local development hosts:
-                    ['.localhost', '127.0.0.1', '::1']
                 - use_script_name: bool (default False) - whether to read path
                   from SCRIPT_NAME
         """
@@ -65,7 +52,7 @@ class Middleware:
         full_path = full_path.rstrip("/")
 
         if full_path.startswith("/tidewave"):
-            security_error = self._check_security(environ)
+            security_error = self._check_security(environ, full_path)
             if security_error:
                 self.logger.warning(security_error)
                 return self._send_error_response(
@@ -87,18 +74,10 @@ class Middleware:
             else:
                 return self._send_error_response(start_response, HTTPStatus.METHOD_NOT_ALLOWED)
 
-        if full_path == "/tidewave/shell":
-            if method == "POST":
-                return self._handle_shell_command(environ, start_response)
-            else:
-                return self._send_error_response(start_response, HTTPStatus.METHOD_NOT_ALLOWED)
-
         return self.app(environ, start_response)
 
     def _handle_home_route(self, start_response: Callable) -> Iterator[bytes]:
         client_url = self.config.get("client_url", "https://tidewave.ai")
-        client_config = self._get_config_data()
-        config_json = html.escape(json.dumps(client_config))
 
         template = f"""
         <!DOCTYPE html>
@@ -106,7 +85,6 @@ class Middleware:
             <head>
                 <meta charset="UTF-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-                <meta name="tidewave:config" content="{config_json}" />
                 <script type="module" src="{client_url}/tc/tc.js"></script>
             </head>
             <body></body>
@@ -141,58 +119,7 @@ class Middleware:
             "tidewave_version": __version__,
         }
 
-    def _handle_shell_command(
-        self, environ: dict[str, Any], start_response: Callable
-    ) -> Iterator[bytes]:
-        """
-        Handle shell command execution for MCP server
-
-        Args:
-            environ: WSGI environ dict
-            start_response: WSGI start_response callable
-
-        Returns:
-            Iterator of binary chunks
-        """
-
-        # Read request body
-        try:
-            content_length = int(environ.get("CONTENT_LENGTH", 0))
-        except (ValueError, TypeError):
-            content_length = 0
-
-        if content_length == 0:
-            return self._send_error_response(
-                start_response, HTTPStatus.BAD_REQUEST, "Command body is required"
-            )
-
-        # Read and parse body
-        try:
-            body = environ["wsgi.input"].read(content_length)
-            parsed_body = json.loads(body)
-            cmd = parsed_body.get("command")
-
-            if not cmd:
-                return self._send_error_response(
-                    start_response, HTTPStatus.BAD_REQUEST, "Command field is required"
-                )
-
-        except json.JSONDecodeError:
-            return self._send_error_response(
-                start_response, HTTPStatus.BAD_REQUEST, "Invalid JSON in request body"
-            )
-        except Exception:
-            return self._send_error_response(
-                start_response, HTTPStatus.BAD_REQUEST, "Error reading request body"
-            )
-
-        # Start streaming response
-        start_response("200 OK", [("Content-Type", "application/octet-stream")])
-
-        # Execute command and yield binary chunks
-        return self._execute_command(cmd)
-
-    def _check_security(self, environ: dict[str, Any]) -> Optional[str]:
+    def _check_security(self, environ: dict[str, Any], full_path: str) -> Optional[str]:
         """Check security constraints (IP and origin)"""
 
         # Check remote IP
@@ -205,52 +132,22 @@ class Middleware:
                 "configure Tidewave with the `allow_remote_access: true` option"
             )
 
-        # Check origin header (if present)
+        # Check origin header
         origin = environ.get("HTTP_ORIGIN")
-        if origin:
-            hostname = urlparse(origin).hostname
-            if hostname is None:
-                return (
-                    "For security reasons, Tidewave only accepts requests from allowed hosts.\n\n"
-                    f"The origin header appears to be malformed: {origin}"
-                )
 
-            host = hostname.lower()
-            if not self._validate_allowed_origin(host):
-                return (
-                    "For security reasons, Tidewave only accepts requests from allowed hosts.\n\n"
-                    f"If you want to allow requests from '{host}', "
-                    "you must configure your framework/Tidewave accordingly"
-                )
+        # GET /tidewave (root) allows any origin
+        if full_path == "/tidewave":
+            return None
 
-        return None
+        # No origin header is always allowed (not from a browser)
+        if not origin:
+            return None
 
-    def _validate_allowed_origin(self, host: str) -> bool:
-        """Validate if origin host is allowed using Django ALLOWED_HOSTS pattern"""
-        allowed_origins = self.config.get("allowed_origins", [".localhost", "127.0.0.1", "::1"])
-
-        # Default to local development hosts if empty (like Django's DEBUG mode)
-        if not allowed_origins:
-            return False
-
-        for allowed in allowed_origins:
-            allowed = allowed.lower()  # Case-insensitive matching
-
-            # Wildcard match
-            if allowed == "*":
-                return True
-
-            # Exact match
-            if host == allowed:
-                return True
-
-            if allowed.startswith("."):
-                domain = allowed[1:]
-
-                if host == domain or host.endswith("." + domain):
-                    return True
-
-        return False
+        # /config and /mcp refuse if origin header is set
+        return (
+            "For security reasons, Tidewave does not accept requests "
+            "with an origin header for this endpoint."
+        )
 
     def _validate_ip(self, ip_str: str) -> bool:
         """Check if IP address is allowed based on allow_remote_access setting"""
@@ -288,68 +185,6 @@ class Middleware:
         status_line = f"{status.value} {status.phrase}"
         start_response(status_line, response_headers)
         return [message_bytes]
-
-    def _execute_command(self, cmd) -> Iterator[bytes]:
-        """
-        Execute command and yield binary chunks
-
-        Args:
-            cmd: Command to execute (string or list)
-
-        Yields:
-            Binary chunks in format: [type:1byte][length:4bytes][data:variable]
-            - Type 0: Command output data
-            - Type 1: Status/completion data
-        """
-        try:
-            # Start process
-            process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,  # Merge stderr into stdout
-                stdin=subprocess.PIPE,
-                shell=isinstance(cmd, str),
-            )
-
-            # Close stdin
-            process.stdin.close()
-
-            # Stream output
-            while True:
-                try:
-                    # Non-blocking I/O for Unix-like systems
-                    ready, _, _ = select.select([process.stdout], [], [], 0.1)
-                    if ready:
-                        data = process.stdout.read(4096)
-                        if data:
-                            # Binary chunk: type (0) + 4-byte length + data
-                            chunk = struct.pack("!BL", 0, len(data)) + data
-                            yield chunk
-                        else:
-                            break  # EOF
-                    elif process.poll() is not None:
-                        # Process finished and no more data
-                        break
-                except (AttributeError, OSError):
-                    # Windows fallback, or when select is not available
-                    data = process.stdout.read(4096)
-                    if data:
-                        chunk = struct.pack("!BL", 0, len(data)) + data
-                        yield chunk
-                    else:
-                        break
-
-            # Send exit status
-            exit_status = process.wait()
-            status_json = json.dumps({"status": exit_status}).encode("utf-8")
-            chunk = struct.pack("!BL", 1, len(status_json)) + status_json
-            yield chunk
-
-        except Exception:
-            # Send error status
-            error_json = json.dumps({"status": 213}).encode("utf-8")
-            chunk = struct.pack("!BL", 1, len(error_json)) + error_json
-            yield chunk
 
 
 def modify_csp(csp_value: str) -> str:
