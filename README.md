@@ -117,7 +117,10 @@ Now make sure [Tidewave is installed](https://hexdocs.pm/tidewave/installation.h
 
 When initializing `Tidewave()`, the following options are supported:
 
-- `allow_remote_access:` allow remote connections when True (default False)
+- `allow_remote_access:` Tidewave only allows requests from localhost by default,
+  even if your server listens on other interfaces, for security purposes.
+  Read [our security guidelines for more information and when to allow
+  remote access](https://hexdocs.pm/tidewave/security.html) (if you know what you are doing)
 - `team`: enable Tidewave Web for teams
 
 ## Available tools
