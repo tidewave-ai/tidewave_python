@@ -29,14 +29,19 @@ def execute_sql_query(engine: Engine) -> Callable[[str, Optional[list[Any]]], st
         if arguments is None:
             arguments = []
 
-        with engine.connect() as connection:
-            if arguments:
-                result = connection.exec_driver_sql(query, tuple(arguments))
+        with engine.begin() as connection:
+            if hasattr(connection, "exec_driver_sql"):
+                # SQLAlchemy 1.4+ provides exec_driver_sql for raw driver SQL
+                if arguments:
+                    result = connection.exec_driver_sql(query, tuple(arguments))
+                else:
+                    result = connection.exec_driver_sql(query)
             else:
-                result = connection.exec_driver_sql(query)
-
-            # Commit the transaction for data persistence
-            connection.commit()
+                # SQLAlchemy 1.3 accepts raw SQL strings via execute()
+                if arguments:
+                    result = connection.execute(query, arguments)
+                else:
+                    result = connection.execute(query)
 
             # Check if this query returns data
             if result.returns_rows:
