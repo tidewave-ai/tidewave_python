@@ -26,7 +26,7 @@ Issues = "https://github.com/tidewave-ai/tidewave_python/issues"
 [project.optional-dependencies]
 django = [ "django>=4.2" ]
 flask = [ "flask>=2" ]
-sqlalchemy = [ "sqlalchemy>=2.0" ]
+sqlalchemy = [ "sqlalchemy>=1.3" ]
 fastapi = [ "fastapi>=0.100", "a2wsgi>=1.9.0" ]
 
 [dependency-groups]
