@@ -34,19 +34,30 @@ class TestMiddlewareBase(unittest.TestCase):
         return Middleware(self.demo_app, self.mcp_handler, config)
 
     def _create_environ(
-        self, path="/", method="GET", body=None, remote_addr="127.0.0.1", origin=None
+        self,
+        path="/",
+        method="GET",
+        body=None,
+        remote_addr="127.0.0.1",
+        origin=None,
+        server_port="8000",
+        host=None,
     ):
         """Create WSGI environ dict for testing"""
         environ = {
             "REQUEST_METHOD": method,
             "PATH_INFO": path,
             "REMOTE_ADDR": remote_addr,
+            "SERVER_PORT": server_port,
             "wsgi.input": BytesIO(body.encode("utf-8") if body else b""),
             "CONTENT_LENGTH": str(len(body.encode("utf-8"))) if body else "0",
         }
 
         if origin:
             environ["HTTP_ORIGIN"] = origin
+
+        if host:
+            environ["HTTP_HOST"] = host
 
         return environ
 
@@ -252,6 +263,41 @@ class TestMiddleware(TestMiddlewareBase):
         self.assertIn("tidewave_version", response_data)
         self.assertEqual(response_data["team"], {"id": "dashbit"})
         self.assertIn("project_name", response_data)
+        self.assertEqual(response_data["local_port"], 8000)
+
+    def test_config_endpoint_uses_server_port_for_local_port(self):
+        """Test that local_port comes from the server port, not Origin or Host"""
+        environ = self._create_environ(
+            "/tidewave/config",
+            "GET",
+            origin="http://localhost:4001",
+            host="localhost:5000",
+            server_port="8000",
+        )
+
+        result = self.middleware(environ, self.start_response)
+
+        call_args = self.start_response.call_args[0]
+        self.assertIn("200", call_args[0])
+
+        response_data = json.loads(b"".join(result).decode("utf-8"))
+        self.assertEqual(response_data["local_port"], 8000)
+
+    def test_config_endpoint_ignores_invalid_server_port(self):
+        """Test that local_port is omitted when the server port is not usable"""
+        for server_port in ("0", ""):
+            with self.subTest(server_port=server_port):
+                environ = self._create_environ(
+                    "/tidewave/config",
+                    "GET",
+                    server_port=server_port,
+                )
+                result = self.middleware(environ, self.start_response)
+
+                response_data = json.loads(b"".join(result).decode("utf-8"))
+                self.assertIsNone(response_data["local_port"])
+
+                self.start_response.reset_mock()
 
     def test_config_endpoint_post_method_not_allowed(self):
         """Test that POST to /tidewave/config returns 405"""
@@ -268,8 +314,8 @@ class TestMiddleware(TestMiddlewareBase):
 class TestOriginValidation(TestMiddlewareBase):
     """Test origin validation"""
 
-    def test_mcp_and_config_refuse_requests_with_origin_header(self):
-        """Test that /mcp and /config refuse any request with origin header"""
+    def test_mcp_refuses_requests_with_origin_header(self):
+        """Test that /mcp refuses any request with origin header"""
         # /mcp should refuse any request with origin header
         environ = self._create_environ(
             "/tidewave/mcp", method="POST", origin="http://localhost:4001"
@@ -277,15 +323,21 @@ class TestOriginValidation(TestMiddlewareBase):
         self.middleware(environ, self.start_response)
         call_args = self.start_response.call_args[0]
         self.assertIn("403", call_args[0])
-        self.start_response.reset_mock()
 
-        # /config should refuse any request with origin header
+    def test_config_allows_requests_with_origin_header_and_cors(self):
+        """Test that /config allows any origin and sends CORS headers"""
         environ = self._create_environ(
-            "/tidewave/config", method="GET", origin="http://localhost:4000"
+            "/tidewave/config", method="GET", origin="http://localhost:4001"
         )
         self.middleware(environ, self.start_response)
         call_args = self.start_response.call_args[0]
-        self.assertIn("403", call_args[0])
+        self.assertIn("200", call_args[0])
+
+        headers = call_args[1]
+        allow_origin = next(
+            (value for name, value in headers if name == "Access-Control-Allow-Origin"), None
+        )
+        self.assertEqual(allow_origin, "*")
 
     def test_root_allows_any_origin(self):
         """Test that / (root) allows any origin"""

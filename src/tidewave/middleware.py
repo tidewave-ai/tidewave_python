@@ -64,7 +64,7 @@ class Middleware:
 
         if full_path == "/tidewave/config":
             if method == "GET":
-                return self._handle_config_route(start_response)
+                return self._handle_config_route(environ, start_response)
             else:
                 return self._send_error_response(start_response, HTTPStatus.METHOD_NOT_ALLOWED)
 
@@ -98,26 +98,46 @@ class Middleware:
         start_response(f"{HTTPStatus.OK.value} {HTTPStatus.OK.phrase}", response_headers)
         return [template.encode("utf-8")]
 
-    def _handle_config_route(self, start_response: Callable) -> Iterator[bytes]:
+    def _handle_config_route(
+        self, environ: dict[str, Any], start_response: Callable
+    ) -> Iterator[bytes]:
         """Handle GET /tidewave/config route to return JSON configuration"""
-        config_data = self._get_config_data()
+        config_data = self._get_config_data(environ)
         config_json = json.dumps(config_data)
 
         response_headers = [
             ("Content-Type", "application/json"),
+            ("Access-Control-Allow-Origin", "*"),
             ("Content-Length", str(len(config_json))),
         ]
         start_response(f"{HTTPStatus.OK.value} {HTTPStatus.OK.phrase}", response_headers)
         return [config_json.encode("utf-8")]
 
-    def _get_config_data(self) -> dict[str, Any]:
+    def _get_config_data(self, environ: dict[str, Any]) -> dict[str, Any]:
         """Get configuration data for client"""
         return {
             "project_name": self.config.get("project_name", "unknown"),
             "framework_type": self.config.get("framework_type", "unknown"),
             "team": self.config.get("team", {}),
             "tidewave_version": __version__,
+            "local_port": self._get_local_port(environ),
         }
+
+    def _get_local_port(self, environ: dict[str, Any]) -> Optional[int]:
+        """Get the port the WSGI server is listening on."""
+        server_port = environ.get("SERVER_PORT")
+        if server_port is None:
+            return None
+
+        try:
+            port = int(server_port)
+        except ValueError:
+            return None
+
+        if port <= 0:
+            return None
+
+        return port
 
     def _check_security(self, environ: dict[str, Any], full_path: str) -> Optional[str]:
         """Check security constraints (IP and origin)"""
@@ -143,7 +163,11 @@ class Middleware:
         if not origin:
             return None
 
-        # /config and /mcp refuse if origin header is set
+        # /config contains metadata for discovery and it is safe to allow any origin
+        if full_path == "/tidewave/config":
+            return None
+
+        # /mcp refuses if origin header is set
         return (
             "For security reasons, Tidewave does not accept requests "
             "with an origin header for this endpoint."

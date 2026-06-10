@@ -119,5 +119,6 @@ class TestDjangoMiddleware(unittest.TestCase):
         self.assertEqual(environ["REQUEST_METHOD"], "POST")
         self.assertEqual(environ["PATH_INFO"], "/tidewave/mcp")
         self.assertEqual(environ["CONTENT_TYPE"], "application/json")
+        self.assertEqual(environ["SERVER_PORT"], "80")
         self.assertIn("wsgi.input", environ)
         self.assertIn("REMOTE_ADDR", environ)
